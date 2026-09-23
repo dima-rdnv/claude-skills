@@ -40,7 +40,7 @@ the sub-skills to load next.
 **Claude Code** — copy or symlink the skill folders into your skills directory:
 
 ```bash
-git clone https://github.com/rodionoffdmitry/claude-skills.git
+git clone https://github.com/dima-rdnv/claude-skills.git
 mkdir -p ~/.claude/skills
 for d in claude-skills/*/; do cp -R "${d%/}" ~/.claude/skills/; done
 ```
