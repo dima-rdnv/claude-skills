@@ -18,7 +18,7 @@ Claude doesn't try them again.
 | [houdini-network-layout](houdini-network-layout/SKILL.md) | Network boxes, sticky notes, comments, safe cleanup of "unused" nodes |
 | [houdini-flipbook](houdini-flipbook/SKILL.md) | Viewport flipbooks to PNG sequences, monitoring long flipbooks |
 | [houdini-to-cinema4d](houdini-to-cinema4d/SKILL.md) | Houdini side of the Alembic hand-off to C4D (attribute clean-up, scale, `width` vs `pscale`) |
-| [cinema4d-mcp](cinema4d-mcp/SKILL.md) | **Core.** C4D MCP install on macOS, bridge rules, safe test documents, index of C4D sub-skills |
+| [cinema4d-mcp](cinema4d-mcp/SKILL.md) | **Core.** C4D MCP install ([setup guide for Windows & macOS](cinema4d-mcp/SETUP.md)), bridge rules, safe test documents, index of C4D sub-skills |
 | [cinema4d-alembic](cinema4d-alembic/SKILL.md) | Alembic import from Python, frame/scale checks, particle attribute mapping |
 | [cinema4d-redshift](cinema4d-redshift/SKILL.md) | Redshift node materials via the maxon API, RS Object tag, verifiable test renders, dead ends |
 | [vo-timing](vo-timing/SKILL.md) | Word-level voice-over timings (faster-whisper) → frame numbers |
@@ -33,7 +33,8 @@ the sub-skills to load next.
   - Houdini: [capoomgit/houdini-mcp](https://github.com/capoomgit/houdini-mcp)
   - Cinema 4D: [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp)
 - Tested with Houdini 21–22 Indie, Cinema 4D 2026 and Redshift. Install notes, including the
-  pitfalls we hit, are in `houdini-mcp` and `cinema4d-mcp`.
+  pitfalls we hit, are in `houdini-mcp` and `cinema4d-mcp`. For a step-by-step Cinema 4D setup on
+  Windows or macOS, see [cinema4d-mcp/SETUP.md](cinema4d-mcp/SETUP.md).
 
 ## Installation
 
