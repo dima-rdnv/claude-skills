@@ -1,6 +1,6 @@
 ---
 name: cinema4d-mcp
-description: Core rules for driving Cinema 4D through the cinema4d MCP server (github.com/ttiimmaacc/cinema4d-mcp) — installing and configuring it on macOS (uv venv, mcp pin, versioned plugin folder, Claude Desktop config), Python bridge rules (result-size limit, 60 s main-thread timeout, undo, safe test documents), and the index of Cinema 4D sub-skills. Use EVERY time a task touches Cinema 4D via MCP, or when a C4D MCP tool fails.
+description: Core rules for driving Cinema 4D through the cinema4d MCP server (github.com/ttiimmaacc/cinema4d-mcp) — installing and configuring it on macOS and Windows (uv venv, mcp pin, versioned plugin folder, Claude Desktop config), Python bridge rules (result-size limit, 60 s main-thread timeout, undo, safe object insertion, safe test documents, UI-only steps via computer use), and the index of Cinema 4D sub-skills. Use EVERY time a task touches Cinema 4D via MCP, or when a C4D MCP tool fails.
 ---
 
 # Cinema 4D via MCP — core
@@ -10,6 +10,14 @@ description: Core rules for driving Cinema 4D through the cinema4d MCP server (g
   Groups vs Thinking Particles, attribute mapping, reading particle data.
 - `cinema4d-redshift` — Redshift node materials through the maxon API, node/port IDs, RS Object tag,
   test renders with pixel checks, known dead ends.
+- `cinema4d-particles` — native 2024+ particle system: emitters, groups, Data Mapper/Math/Look
+  modifiers, forces with measured units, Cloner on particles, RS rendering, sim traps.
+- `cinema4d-rigging` — control nulls with user data, Python tag drivers, self-updating dropdowns,
+  spline travel, HUD, procedural splines/meshes.
+- `cinema4d-render-preview` — look at renders from the sandbox: clone → step sim → RenderDocument →
+  base64 JPEG, contact sheets, reference-video comparison, viewport screenshots.
+- `cinema4d-takes` — reading/creating takes, overrides (incl. user data), override groups,
+  per-take camera/render data, verifying/rendering a take via TakeToDocument.
 - `houdini-to-cinema4d` — the Houdini side of the Alembic hand-off (export recipe, verification).
 - `project-notes` — per-production notes (scene map, state) kept outside the skills.
 
@@ -64,14 +72,28 @@ In C4D: Extensions → Socket Server Plugin → Start Server. After a Claude res
 - Find objects by walking `GetDown()/GetNext()` and matching `GetName()`; toggle an object with
   `op[c4d.ID_BASEOBJECT_GENERATOR_FLAG] = False`.
 - `render_preview` returned "No image data" in a Redshift scene — render with `RenderDocument`
-  instead (see `cinema4d-redshift`).
+  instead (see `cinema4d-render-preview`).
+- **Insert objects with `doc.InsertObject(op, parent=p, pred=prev)`, never `op.InsertUnder(p)`** —
+  InsertUnder'd objects silently broke the whole native particle sim (see `cinema4d-particles`).
+- Replies over ~50k characters are not shown inline; they are saved to a `tool-results/*.txt` JSON
+  file — parse it in the sandbox (used for base64 render previews).
+- Big strings (e.g. Python tag code) go inside `main()`, otherwise they are echoed back.
+- `CallCommand(12414)` (next frame) doesn't evaluate synchronously — step with SetTime+ExecutePasses.
+- The user may edit the open scene while you work (lights, views, selection). Re-read the hierarchy
+  before structural edits; clean up temporary objects/documents immediately
+  (`c4d.documents.KillDocument`, then `SetActiveDocument` back to their file).
+- UI-only actions (Add to HUD, some buttons): computer use on "Maxon Cinema 4D 2026"
+  (`computer_resolve_access` → `computer_request_access`); a context-menu item may need two clicks.
+- On Windows, Mac-only tools (`sips`) don't exist — use the in-memory render path in
+  `cinema4d-render-preview`.
 
 ## Testing without touching the user's project (verified)
 - For import/attribute questions, work in a throwaway `c4d.documents.BaseDocument()` (MergeDocument
   into it, ExecutePasses, read) — nothing lands in the open scene.
-- **But a Python-created blank document is not fully initialised** (simulation system): it can show
-  data a real scene never will (particle colour channel). For anything simulation/particle related,
-  test in an in-memory copy of the real file: `c4d.documents.LoadDocument(path, SCENEFILTER_OBJECTS |
+- **But a Python-created blank document is not fully initialised** for Alembic particles: it can show
+  data a real scene never will (particle colour channel). Native particle simulations (emitters,
+  modifiers, forces) do run correctly in a blank `BaseDocument()` — fine as a sandbox for those.
+  For Alembic-particle or scene-dependent questions, test in an in-memory copy of the real file: `c4d.documents.LoadDocument(path, SCENEFILTER_OBJECTS |
   SCENEFILTER_MATERIALS, None)` — never inserted into the document list, so the open file is untouched.
 - Bisect a scene-dependent problem on such a copy: remove top-level objects one at a time, then
   materials; compare document parameters and scene hooks (`doc.GetBranchInfo()` → "Scene Hooks").

@@ -1,6 +1,6 @@
 ---
 name: cinema4d-redshift
-description: Redshift in Cinema 4D through Python — building and editing Redshift node materials with the maxon graph API (node and port IDs for RS Standard, attribute lookups, user data), the RS Object tag particle settings, fast test renders with RenderDocument and pixel-level verification, viewing renders from the sandbox, and verified dead ends (per-particle colour on Alembic Particle Groups). Use when shading or test-rendering with Redshift in C4D. Load with cinema4d-mcp.
+description: Redshift in Cinema 4D through Python — building and editing Redshift node materials with the maxon graph API (node and port IDs for RS Standard, state/math/colour-mix nodes, attribute lookups, user data, reading wiring), an emission-only lit-gold recipe that needs no lights, the RS Object tag particle settings (Alembic and native particle groups), fast test renders with RenderDocument and pixel-level verification, viewing renders from the sandbox, and verified dead ends (per-particle colour on Alembic Particle Groups). Use when shading or test-rendering with Redshift in C4D. Load with cinema4d-mcp.
 ---
 
 # Redshift in Cinema 4D (verified, C4D 2026.3)
@@ -22,6 +22,11 @@ description: Redshift in Cinema 4D through Python — building and editing Redsh
 - Find node types: `maxon.AssetInterface.GetUserPrefsRepository().FindAssets(
   maxon.AssetTypes.NodeTemplate(), maxon.Id(), maxon.Id(), maxon.ASSET_FIND_MODE.LATEST)` and filter
   ids for "redshift" (161 templates). Build a node in a throwaway doc's material to list its ports.
+- Value types that worked (2026.1): colour ports `maxon.Color(r, g, b)` (linear), vector ports
+  `maxon.Vector(x, y, z)`, scalars `maxon.Float(v)`.
+- Read wiring: `conns = []; port.GetConnections(maxon.PORT_DIR.INPUT, conns)` → `conns[i][0]` is
+  the source port (`.GetAncestor(maxon.NODE_KIND.NODE)` for its node). `maxon.PORT_CONNECTION_MODE`
+  doesn't exist. Identify nodes by wiring, not by list order, before editing duplicates.
 
 ## IDs (prefix `com.redshift3d.redshift4c4d.nodes.core.`)
 - `standardmaterial`: `.base_color`, `.base_color_weight`, `.emission_color`, `.emission_weight`,
@@ -29,14 +34,34 @@ description: Redshift in Cinema 4D through Python — building and editing Redsh
 - `vertexattributelookup`: `.attribute`, `.defaultcolor` (magenta), `.defaultscalar`, `.outcolor`, `.outscalar`.
 - `particleattributelookup`: `.attribute`, `.outcolor`, `.outscalar`.
 - `rsuserdatacolor`: `.attribute`, `.default`, `.out` (also `rsuserdatascalar/vector/integer/string`).
-- Others seen: `texturesampler`, `triplanar`, `fresnel`, `bumpmap`, `bumpblender`, `roundcorners`,
-  `rsscalarramp`, `rscolorconstant`, `incandescent`, `state`, `c4dhairattribute`, `volume*attribute`.
+- `state`: outputs `.normal`, `.normal_nobump`, `.normal_geom`, `.raydirection`, `.rayposition`,
+  `.uvwcoord`, `.tangent`, `.bitangent` (world space).
+- `rsmathdotvector`: `.input1`, `.input2`, `.out` · `rsmathrange`: `.input`, `.old_min`, `.old_max`,
+  `.new_min`, `.new_max`, `.clamp`, `.out` · `rsmathsaturate`: `.input`, `.out` · `rsmathpow`:
+  `.base`, `.exponent`, `.out` · `rsmathmul`: `.input1`, `.input2`, `.out`.
+- `rscolormix`: `.input1`, `.input2`, `.mixamount`, `.outcolor` · `rscolorconstant`: `.color`,
+  `.outcolor` · `fresnel`: `.facing_color`, `.perp_color`, `.ior`, `.outcolor` · `ambientocclusion`:
+  `.bright`, `.dark`, `.spread`, `.maxdistance`, `.out` · `rsramp`: `.input`, `.ramp` (gradient —
+  setting it from Python untested), `.outcolor` · `rscolorlayer`: `.base_color`, `.layerN_color/_mask/_blend_mode`.
+- Others seen: `texturesampler`, `triplanar`, `bumpmap`, `bumpblender`, `roundcorners`,
+  `rsscalarramp`, `incandescent`, `curvature`, `rsvectormaker`, `c4dhairattribute`, `volume*attribute`.
+
+## Recipe: emission-only "lit" gold without lights (verified look)
+For stylised elements that must read without a light rig: RS Standard with base colour black,
+refl_weight 0, emission weight ≈1.2, emission colour =
+`colormix(dark, gold, range(dot(state.normal, L), -1..1 → 0..1))` → second `colormix(that,
+highlight, pow(saturate(dot(state.normal, H)), 18))`, with L = normalize(-0.55, 0.65, -0.55) (upper
+left, towards a camera looking down +Z) and H = normalize(L + (0, 0, -1)). Gold that read well:
+dark (0.30, 0.13, 0.02), gold (1.0, 0.72, 0.28), highlight (1.0, 0.93, 0.70) (linear).
+Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads as pale gold.
 
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom
   objects, **5 Optimized Spheres**), 3001 Scale Multiplier (× the particle radius channel).
 - Motion blur: 6999 override, 6000 mode (0 Global, 1 Off, 2 Transformation, 3 + Deformation).
 - Verified: an Alembic Particle Group renders as Optimized Spheres at its `width` radius.
+- Verified: native simulated Particle Groups (Basic Emitter) render the same way (radius × 3001);
+  material = texture tag on the group. Mode 0 hides a group that only feeds a Cloner.
 
 ## Test renders you can verify
 ```python
@@ -49,8 +74,11 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
 - Returns well under the 60 s limit at this size. Set `doc.SetTime(...)` first.
 - Verify numerically: sample `bmp.GetPixel(x, y)` in the region of interest and bucket colours
   (a magenta default on a lookup node = "attribute not found").
-- To look at it: `bmp.Save('/tmp/x.png', c4d.FILTER_PNG)`, then open the file with any image-capable
-  tool (e.g. a shell tool: `sips -s format jpeg ...` → `base64` → decode and view).
+- To look at it (any OS, no files): save to `c4d.storage.MemoryFileStruct` as JPEG, print base64,
+  decode in the sandbox — full recipe, crops and contact sheets in `cinema4d-render-preview`.
+  (Old macOS route: `bmp.Save('/tmp/x.png', c4d.FILTER_PNG)` → `sips` → `base64`.)
+- Simulations: render a clone stepped from frame 0 with `RENDERFLAGS_NODOCUMENTCLONE` so the sim
+  state is kept (verified with native particles).
 - A scene's render output path may be a Windows path (`D:/...`) — on macOS that creates a folder named
   `D:` next to the scene; keep SAVEIMAGE off for tests.
 

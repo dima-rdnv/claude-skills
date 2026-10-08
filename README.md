@@ -2,7 +2,8 @@
 
 [Agent Skills](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) that teach
 Claude to drive **SideFX Houdini** and **Maxon Cinema 4D** through MCP servers: particle sims,
-VDB surfacing, Alembic hand-offs, Redshift materials, flipbooks and tidy node networks.
+VDB surfacing, Alembic hand-offs, native C4D particles, rigs and takes, Redshift materials,
+flipbooks and tidy node networks.
 
 Everything here comes from real production sessions. A recipe gets in only after it has been tested
 in a real scene. Anything else is marked *(unverified)*. Failed approaches are written down too, so
@@ -20,7 +21,11 @@ Claude doesn't try them again.
 | [houdini-to-cinema4d](houdini-to-cinema4d/SKILL.md) | Houdini side of the Alembic hand-off to C4D (attribute clean-up, scale, `width` vs `pscale`) |
 | [cinema4d-mcp](cinema4d-mcp/SKILL.md) | **Core.** C4D MCP install ([setup guide for Windows & macOS](cinema4d-mcp/SETUP.md)), bridge rules, safe test documents, index of C4D sub-skills |
 | [cinema4d-alembic](cinema4d-alembic/SKILL.md) | Alembic import from Python, frame/scale checks, particle attribute mapping |
-| [cinema4d-redshift](cinema4d-redshift/SKILL.md) | Redshift node materials via the maxon API, RS Object tag, verifiable test renders, dead ends |
+| [cinema4d-redshift](cinema4d-redshift/SKILL.md) | Redshift node materials via the maxon API, node/port IDs, light-free emissive recipe, RS Object tag, verifiable test renders, dead ends |
+| [cinema4d-particles](cinema4d-particles/SKILL.md) | Native particles (2024+): emitters, groups, Data Mapper/Math/Condition/Reproduce, measured forces, Cloner on particles, trail and burst recipes |
+| [cinema4d-rigging](cinema4d-rigging/SKILL.md) | Control rigs: user data, keyed controls, Python tag drivers, self-updating dropdowns, spline travel, HUD, procedural geometry |
+| [cinema4d-render-preview](cinema4d-render-preview/SKILL.md) | Looking at renders from the sandbox: stepped-clone renders to base64 JPEG, contact sheets, reference-footage comparison |
+| [cinema4d-takes](cinema4d-takes/SKILL.md) | Takes: reading and adding overrides (incl. user data), override groups, per-take camera/render data, TakeToDocument |
 | [vo-timing](vo-timing/SKILL.md) | Word-level voice-over timings (faster-whisper) → frame numbers |
 | [project-notes](project-notes/SKILL.md) | How to keep per-production notes across sessions, separate from the skills |
 
