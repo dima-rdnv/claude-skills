@@ -33,7 +33,15 @@ socket plugin described below. Notes:
 - `list_entities(kind="object")` on a tracked scene (300+ feature nulls) overflows the reply —
   summarise the hierarchy with `exec_python` instead.
 - `capture_viewport` shows the active scene camera's view incl. helper objects — good for checking
-  tracked points and scale proxies against footage.
+  tracked points and scale proxies against footage. It only captures the **active** document.
+- Copy objects + their materials between open documents with links intact: `trans = c4d.AliasTrans();
+  trans.Init(src)`, `GetClone(c4d.COPYFLAGS_NONE, trans)` for every material and object, then
+  `trans.Translate(True)`, then insert into the target (texture tags point at the copied materials).
+- `add_undo_create` only works for the active document (`doc`); objects inserted into another open
+  document are kept but the call errors and Ctrl-Z there won't remove them — say so.
+- **Before any temporary viewport change** (hiding objects, display modes, track display) record
+  the original values and restore those — the user may have hidden things on purpose; resetting to
+  "default" overrides their choice.
 
 ## What it is (reviewed Sep 2026, commit 6bab376)
 - C4D plugin `c4d_plugin/mcp_server_plugin.pyp`: socket server on **127.0.0.1:5555** only.

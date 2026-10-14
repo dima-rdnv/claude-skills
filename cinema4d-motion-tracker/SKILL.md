@@ -77,6 +77,28 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   HPB via `MatrixToHPB` + `GetOptimalAngle`, `add_undo_change(cam)` first; keep a clone of the
   camera as "before" for A/B.
 
+## Copying a CG setup between shots (verified)
+- **Film offset convention** (checked against `BaseDraw.WS` mapped through `GetSafeFrame()`):
+  `u = W/2 + f_px·qx/qz − offX·W`, `v = H/2 − f_px·qy/qz − offY·H` (offX/offY = CAMERAOBJECT_FILM_OFFSET_X/Y).
+  Camera Calibrator results often carry large offsets (here −0.086 / +0.245) — include them.
+- Two files whose shots share a frame (one shot ends where the next begins) can still disagree on the
+  lens (tracked 34.4 mm vs calibrated 17.8 mm + shift for the very same image). Then no rigid copy
+  lines up (best similarity fit: ~100 px). Exact at the shared frame: in camera coordinates
+  `q_t = λ·A·q_s`, `A = K_t⁻¹K_s = [[f_s/f_t, 0, −offX_s·W/f_t], [0, f_s/f_t, offY_s·H/f_t], [0,0,1]]`,
+  world: `P_t = c_t + R_t·λA·R_sᵀ(P_s − c_s)`; λ from one depth anchor (e.g. a head proxy onto the
+  tracked head). Keep everything live by SVD `M = UΣVᵀ` → outer null (axes = U·σ, position) holding
+  an inner null (axes = Vᵀ columns) holding the clones with their original matrices. Verified 0.000 px
+  on the deformed geometry through C4D's own cameras; the proxy landed 1.8 cm from the tracked head.
+- When the target shot is a different angle (hard cut) and its solve has no depth (static camera:
+  the nearest object solved behind farther ones), place by anchors instead: head distance from a
+  known size (ear ≈ 6 cm) and focal; car axes from the vanishing point of two front-to-back lines;
+  scene scale (units/cm) from how a point at that depth must move under the camera drift to match
+  its 2D track. *(Accuracy unverified — ask for a by-eye check.)*
+- Deformed geometry of a generator with a deformer child: `op.GetDeformCache()` on the generator is
+  None — walk `op.GetCache()` and take each point object's `GetDeformCache()`; points are in `op`'s space.
+- Offline check that needs no viewport: export the deformed points + camera per frame and draw them
+  over the footage frames (ffmpeg extract + Pillow) — immune to hidden backgrounds or viewport state.
+
 ## Real-world scale
 - Scaling every position (camera path + points) about the origin by K leaves the image identical
   (focal unchanged), so scale is one factor chosen at bake time.
