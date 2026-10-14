@@ -18,8 +18,22 @@ description: Core rules for driving Cinema 4D through the cinema4d MCP server (g
   base64 JPEG, contact sheets, reference-video comparison, viewport screenshots.
 - `cinema4d-takes` — reading/creating takes, overrides (incl. user data), override groups,
   per-take camera/render data, verifying/rendering a take via TakeToDocument.
+- `cinema4d-motion-tracker` — Motion Tracker: reading 2D tracks/solve, why a solve stops, running
+  the solver from a script, extending a solve past an occlusion, real-world scale, baking a camera.
 - `houdini-to-cinema4d` — the Houdini side of the Alembic hand-off (export recipe, verification).
 - `project-notes` — per-production notes (scene map, state) kept outside the skills.
+
+## Maxon's own MCP adapter (verified C4D 2026.4, adapter 1.0.0.22, Windows)
+C4D 2026.4 ships `mxn_plugins/mcp_adapter` (stdio relay to `http://127.0.0.1:5556/mcp`); its tools
+(`ping`, `list_entities`, `get/set_parameters`, `exec_python`, `capture_viewport`, …) differ from the
+socket plugin described below. Notes:
+- `exec_python(code, undo=true)` records nothing by itself: call `add_undo_create(op)` /
+  `add_undo_change(op)` before each edit. `SetTime` alone triggers a harmless "not undoable" warning.
+- File writes with `open()` work there — export JSON and do heavy maths locally.
+- `list_entities(kind="object")` on a tracked scene (300+ feature nulls) overflows the reply —
+  summarise the hierarchy with `exec_python` instead.
+- `capture_viewport` shows the active scene camera's view incl. helper objects — good for checking
+  tracked points and scale proxies against footage.
 
 ## What it is (reviewed Sep 2026, commit 6bab376)
 - C4D plugin `c4d_plugin/mcp_server_plugin.pyp`: socket server on **127.0.0.1:5555** only.

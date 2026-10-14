@@ -26,6 +26,7 @@ Claude doesn't try them again.
 | [cinema4d-particles](cinema4d-particles/SKILL.md) | Native particles (2024+): emitters, groups, Data Mapper/Math/Condition/Reproduce, measured forces, Cloner on particles, trail and burst recipes |
 | [cinema4d-rigging](cinema4d-rigging/SKILL.md) | Control rigs: user data, keyed controls, Python tag drivers, self-updating dropdowns, spline travel, HUD, procedural geometry |
 | [cinema4d-render-preview](cinema4d-render-preview/SKILL.md) | Looking at renders from the sandbox: stepped-clone renders to base64 JPEG, contact sheets, reference-footage comparison |
+| [cinema4d-motion-tracker](cinema4d-motion-tracker/SKILL.md) | Motion Tracker: diagnosing a solve that stops, solver from Python, extending a camera solve past an occlusion (PnP + triangulation + bundle adjustment scripts), real-world scale from a person, baking a clean camera |
 | [cinema4d-takes](cinema4d-takes/SKILL.md) | Takes: reading and adding overrides (incl. user data), override groups, per-take camera/render data, TakeToDocument |
 | [aftereffects-bridge](aftereffects-bridge/SKILL.md) | After Effects without MCP: a file-based ExtendScript bridge ([ClaudeBridge.jsx](aftereffects-bridge/scripts/ClaudeBridge.jsx)), safe script hand-off, inspecting comps, preview renders, retiming keys to a VO, building UI layers |
 | [vo-timing](vo-timing/SKILL.md) | Word-level voice-over timings (faster-whisper) → frame numbers |
