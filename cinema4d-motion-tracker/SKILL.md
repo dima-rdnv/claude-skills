@@ -61,6 +61,22 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
    previous frame to avoid flips, linear keys), adds feature nulls. Leave the Motion Tracker untouched.
 5. Verify inside C4D: re-project the baked feature nulls through the baked camera against the 2D tracks.
 
+## De-jittering a solved camera (verified: CG jitter 2.8 → 0.5 px/f², match 6.1 → 6.3 px)
+- Measure jitter where the viewer sees it: second difference across frames of the projected solved
+  points ("CG jitter"), next to the same of their 2D tracks ("footage jitter"). CG jitter clearly above
+  footage jitter = solve noise. Frames with few inliers (an occlusion, points entering) are worst.
+- **Position and rotation noise largely cancel in the image.** Penalising position and angular
+  acceleration separately (or smoothing rotation only) made the image jitter *worse* (6 → 36 px/f²).
+- What worked: Gaussian-smooth position and rotation (quaternions, one hemisphere) with the **same
+  sigma** — `scripts/dejitter_camera.py cam.json 1.5 out.json [solves.json features.json K]`. σ 1.5
+  frames took CG jitter below footage jitter for +0.2 px median error; σ 3 started to slide. Taper σ
+  to 0 over the first/last ~2.5σ frames, or the truncated window drags the ends (13 → 26 px at frame 1).
+- A pose re-fit or bundle adjustment with an image-space smoothness term (virtual points at scene
+  depth) via scipy `least_squares` + finite differences stalled (max_nfev, no change) — not worth it here.
+- Apply in C4D by rewriting the existing key values (`curve.FindKey(BaseTime)["key"].SetValue`),
+  HPB via `MatrixToHPB` + `GetOptimalAngle`, `add_undo_change(cam)` first; keep a clone of the
+  camera as "before" for A/B.
+
 ## Real-world scale
 - Scaling every position (camera path + points) about the origin by K leaves the image identical
   (focal unchanged), so scale is one factor chosen at bake time.
