@@ -72,6 +72,8 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   frame the texture is blank, after the last it holds. So with `framestart = N0`,
   `startoffset = −N0`, `framerate = 30` a sequence numbered in 30 fps edit frames plays at its edit
   time in a scene of any fps whose time equals edit time (same rule AE uses to nest 30 in 50 fps).
+  Checked at 50 fps and at 30 fps: at exact frame times (30 fps scene, 30 fps sequence) there is no
+  floating-point off-by-one — frames 509…855 all mapped to themselves, in Time and in Frame timing.
 - `rangestart`/`rangeend` can't be set from Python: `SetPortValue` rejects `maxon.TimeValue`
   (also wrapped in `maxon.Data`) — use Time + start offset instead of Range.
 - A relative path into a sub-folder works: `maxon.Url("relative:///Sub/seq_00509.png")` resolves
