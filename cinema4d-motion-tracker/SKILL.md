@@ -110,7 +110,12 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
 - A static (calibrated) file just needs `doc.SetFps`, RDATA_FRAMERATE and the new range — assert it
   has no keys first.
 - Footage textures: legacy Bitmap shader → `BITMAPSHADER_TIMING_TIMING = …_TIMING_AREA`,
-  RANGEFROM = delta, RANGETO = delta + (TO − FROM) frames. The Motion Tracker's own footage display
+  RANGEFROM = delta, RANGETO = delta + (TO − FROM) frames — verified frame-exact by sampling a barcode
+  sequence (`InitRender(InitRenderStruct(doc))` + `ChannelData.t` + `Sample`): scene frame delta+k shows
+  clip frame FROM+k, first frame held before, last after; end = start+span+1 is off by one.
+  For an image sequence numbered in edit frames, FROM..TO are the file numbers, so RANGEFROM = FROM.
+  `CallButton(sh, BITMAPSHADER_CALCULATE)` returns 0–0 for a **relative** path — set the absolute path.
+  When comparing sampled colours with the source file, linearise the file's sRGB values first. The Motion Tracker's own footage display
   keeps footage frame = scene frame, so after a shift it no longer lines up: give the camera a
   separate viewport-only footage background and don't re-solve (it would rewrite the camera at 0-based frames).
 

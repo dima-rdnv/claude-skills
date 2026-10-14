@@ -33,7 +33,11 @@ socket plugin described below. Notes:
 - `list_entities(kind="object")` on a tracked scene (300+ feature nulls) overflows the reply —
   summarise the hierarchy with `exec_python` instead.
 - `capture_viewport` shows the active scene camera's view incl. helper objects — good for checking
-  tracked points and scale proxies against footage. It only captures the **active** document.
+  tracked points and scale proxies against footage. It only captures the **active** document, and it
+  can keep returning a stale image (`identical_to_previous: true`, same digest) after real changes, even
+  after `DrawViews(FORCEFULLREDRAW)` — then verify numerically or render instead.
+- The user may switch the active document while you work: for read-only steps find documents by name
+  instead of using `doc`; for edits assert `doc.GetDocumentName()` first so a switch aborts cleanly.
 - Copy objects + their materials between open documents with links intact: `trans = c4d.AliasTrans();
   trans.Init(src)`, `GetClone(c4d.COPYFLAGS_NONE, trans)` for every material and object, then
   `trans.Translate(True)`, then insert into the target (texture tags point at the copied materials).
