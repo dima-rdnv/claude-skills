@@ -109,7 +109,15 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   match many frames) and vote on the offset — 35/35 votes gave a 1-frame-exact start.
 - Shift the file: every CTrack key `k.SetTime(cv, k.GetTime() + delta)` — iterate keys **last to
   first** so none passes its neighbour — on objects, tags, materials and their shaders, render data
-  and video posts, take overrides; then doc min/max, preview min/max, current time, RDATA_FRAMEFROM/TO.
+  and video posts, take overrides; then doc min/max, preview min/max, current time.
+  **Don't do `rd[RDATA_FRAMEFROM] += delta`** when the range mode is "All frames": From/To mirror the
+  document range, so after the doc shift you add delta twice (observed: 2x and 3x the shot start) and
+  the mode flipped to Manual — the file would render the wrong frames. Leave All frames alone; for a
+  Manual range keep its times (BaseTime is in seconds). Print the mode and range afterwards.
+- Changing a file's fps (e.g. 50 -> 30): key times are seconds and survive; tracked per-frame camera
+  tracks stay where they are and interpolate; snap only sparse hand-set keys (e.g. a 2-key fade) to
+  the new frame grid, refusing if two keys would share a frame. New range = ceil(start*fps) ..
+  floor(end*fps). Time-based texture mappings (bitmap Range, RS Time + start offset) need no change.
   Check by comparing the camera matrix at old f vs new f + delta (exactly 0 expected).
 - A static (calibrated) file just needs `doc.SetFps`, RDATA_FRAMERATE and the new range — assert it
   has no keys first.

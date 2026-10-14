@@ -41,6 +41,8 @@ socket plugin described below. Notes:
 - Copy objects + their materials between open documents with links intact: `trans = c4d.AliasTrans();
   trans.Init(src)`, `GetClone(c4d.COPYFLAGS_NONE, trans)` for every material and object, then
   `trans.Translate(True)`, then insert into the target (texture tags point at the copied materials).
+- `add_undo_change(doc)` does not capture document settings: `doc.DoUndo()` reverted the render data
+  but left SetFps/SetMinTime/SetMaxTime changes in place. Get settings right first time; record old values.
 - `add_undo_create` only works for the active document (`doc`); objects inserted into another open
   document are kept but the call errors and Ctrl-Z there won't remove them — say so.
 - **Before any temporary viewport change** (hiding objects, display modes, track display) record
