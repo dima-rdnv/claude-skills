@@ -7,12 +7,21 @@ description: Extracting word-level timings from a voice-over audio file (mp3/wav
 - Word-level VO timings: `pip install faster-whisper --break-system-packages`, model `base.en`,
   `transcribe(..., word_timestamps=True)`, convert seconds × fps to frames. Runs fine on CPU in the
   sandbox for a ~3 min file. Key sim events (bursts, ignition, exhaust) to the words.
+- Windows host without pip access (verified Win 11, uv, Python 3.12, faster-whisper current in
+  Oct 2026): `uv run -q --python 3.12 --with faster-whisper python -I tx.py …` works, but
+  passing a file path fails inside `decode_audio` with
+  `TypeError: open() got an unexpected keyword argument 'metadata_errors'` (newer PyAV). Extract the
+  audio first — `ffmpeg -i in.mp4 -vn -ac 1 -ar 16000 vo.wav` (works straight from an animatic/edit
+  .mp4) — and pass a float32 array: `wave` + `np.frombuffer(..., np.int16) / 32768`. Model
+  `small.en` with `int8` on CPU transcribed 104 s in well under 2 min, with clean word timings.
+- When the VO lives inside an edit/animatic, its timeline seconds are the edit's timecode — map them
+  to a comp via the comp's start offset (see `aftereffects-bridge` for precomp time mapping).
 - Frame numbers from seconds×fps are 0-based; Houdini frames are 1-based (+1); C4D is 0-based.
 - To line words up with an animated part in Houdini, sample `prim.boundingBox()` of the one prim
   whose `path` ends with the part name at ~15 frames — never loop every frame.
 
 ## Keeping this skill current
-After any session that used Houdini/Cinema 4D via MCP, or whenever something new is verified:
+After any session that used Houdini/Cinema 4D/After Effects, or whenever something new is verified:
 1. Add gotchas/recipes ONLY if tested and working in a real scene; mark anything else "(unverified)".
 2. Correct entries that proved wrong — don't append contradictions.
 3. Put each finding in the skill it belongs to (see the indexes in `houdini-mcp` and `cinema4d-mcp`);

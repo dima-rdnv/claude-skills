@@ -1,9 +1,10 @@
-# Claude skills for Houdini & Cinema 4D
+# Claude skills for Houdini, Cinema 4D & After Effects
 
 [Agent Skills](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) that teach
-Claude to drive **SideFX Houdini** and **Maxon Cinema 4D** through MCP servers: particle sims,
-VDB surfacing, Alembic hand-offs, native C4D particles, rigs and takes, Redshift materials,
-flipbooks and tidy node networks.
+Claude to drive **SideFX Houdini** and **Maxon Cinema 4D** through MCP servers, and **Adobe After
+Effects** through a small file-based script bridge: particle sims, VDB surfacing, Alembic hand-offs,
+native C4D particles, rigs and takes, Redshift materials, flipbooks, tidy node networks, and
+retiming AE animation to a voice-over.
 
 Everything here comes from real production sessions. A recipe gets in only after it has been tested
 in a real scene. Anything else is marked *(unverified)*. Failed approaches are written down too, so
@@ -26,6 +27,7 @@ Claude doesn't try them again.
 | [cinema4d-rigging](cinema4d-rigging/SKILL.md) | Control rigs: user data, keyed controls, Python tag drivers, self-updating dropdowns, spline travel, HUD, procedural geometry |
 | [cinema4d-render-preview](cinema4d-render-preview/SKILL.md) | Looking at renders from the sandbox: stepped-clone renders to base64 JPEG, contact sheets, reference-footage comparison |
 | [cinema4d-takes](cinema4d-takes/SKILL.md) | Takes: reading and adding overrides (incl. user data), override groups, per-take camera/render data, TakeToDocument |
+| [aftereffects-bridge](aftereffects-bridge/SKILL.md) | After Effects without MCP: a file-based ExtendScript bridge ([ClaudeBridge.jsx](aftereffects-bridge/scripts/ClaudeBridge.jsx)), safe script hand-off, inspecting comps, preview renders, retiming keys to a VO, building UI layers |
 | [vo-timing](vo-timing/SKILL.md) | Word-level voice-over timings (faster-whisper) → frame numbers |
 | [project-notes](project-notes/SKILL.md) | How to keep per-production notes across sessions, separate from the skills |
 
@@ -37,7 +39,9 @@ the sub-skills to load next.
 - An MCP bridge for the app you want Claude to control:
   - Houdini: [capoomgit/houdini-mcp](https://github.com/capoomgit/houdini-mcp)
   - Cinema 4D: [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp)
-- Tested with Houdini 21–22 Indie, Cinema 4D 2026 and Redshift. Install notes, including the
+  - After Effects: no MCP needed — run the included
+    [ClaudeBridge.jsx](aftereffects-bridge/scripts/ClaudeBridge.jsx) panel (see `aftereffects-bridge`)
+- Tested with Houdini 21–22 Indie, Cinema 4D 2026, After Effects 2026 and Redshift. Install notes, including the
   pitfalls we hit, are in `houdini-mcp` and `cinema4d-mcp`. For a step-by-step Cinema 4D setup on
   Windows or macOS, see [cinema4d-mcp/SETUP.md](cinema4d-mcp/SETUP.md).
 
