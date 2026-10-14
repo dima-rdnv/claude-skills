@@ -44,6 +44,26 @@ t.SetChecked(True)
 - Wrap edits in undo. Takes are document data, so don't create or delete takes in a user's scene
   unless asked.
 
+## Replicating a take setup from a reference file (verified C4D 2026.4)
+- `td.AddTake(name, parent, None)` inserts the new take as the **first** child. Add them in reverse
+  order, or reorder with `td.InsertTake(take, other, c4d.INSERT_BEFORE)`.
+- Copy the DescIDs from the reference's overrides (`ov.GetAllOverrideDescID()`) instead of building
+  them, so the dtypes match exactly. Mirror the Main take's base-value overrides too.
+- Typical "passes" setup: Main overrides the parts' Enabled (906) = on; each child take switches the
+  other parts off; Redshift camera **Background (13000)**: 0 Render Settings, 1 Off, 2 Override —
+  set to Off in the pass takes so they render on alpha.
+- Render settings worth diffing between files (flatten `GetDataInstance()` incl. nested containers):
+  5016 frame sequence (1 current, 2 all), 5033 format (`c4d.FILTER_EXR` 1016606, `FILTER_TIF` 1100,
+  `FILTER_PNG` 1023671), RDATA_FORMATDEPTH, RDATA_SAVEOPTIONS container (copy it with the format),
+  RDATA_PATH, RDATA_MULTIPASS_SAVEIMAGE, and the Redshift video post (2006 = Denoising › Enabled).
+  Keep each file's own fps/resolution/film aspect — don't clone render data across files with a
+  different frame rate.
+- For working undo in several open files, make each one active in its **own** call first
+  (`SetActiveDocument`), edit in the next call with `undo=true`, restore the user's active file at the end.
+- Verify per take with `TakeToDocument` (enabled flags, camera background), then `KillDocument`.
+- `SetTime`/`ExecutePasses` on a document marks it as changed even when nothing was edited — tell
+  the user, so an "unsaved changes" flag on a file you only inspected isn't a surprise.
+
 ## Edit an existing override (verified)
 ```python
 ov = take.FindOverride(td, obj)                  # None if the take doesn't override obj
