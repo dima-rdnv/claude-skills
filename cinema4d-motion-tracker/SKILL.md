@@ -89,6 +89,10 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   tracked head). Keep everything live by SVD `M = UΣVᵀ` → outer null (axes = U·σ, position) holding
   an inner null (axes = Vᵀ columns) holding the clones with their original matrices. Verified 0.000 px
   on the deformed geometry through C4D's own cameras; the proxy landed 1.8 cm from the tracked head.
+- Anchor at the **actual shared image** — the clip's last real frame — not the document's last frame:
+  a tracker range often runs one frame past the clip (here 0–241 for frames 0–240), and anchoring one
+  frame late left a 2–11 px jump at the cut. Later edits to the source setup copy over by giving the
+  clones under the inner null the source objects' world matrices (the inner space = source world).
 - When the target shot is a different angle (hard cut) and its solve has no depth (static camera:
   the nearest object solved behind farther ones), place by anchors instead: head distance from a
   known size (ear ≈ 6 cm) and focal; car axes from the vanishing point of two front-to-back lines;
