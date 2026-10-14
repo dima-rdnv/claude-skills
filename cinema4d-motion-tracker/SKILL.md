@@ -99,6 +99,21 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
 - Offline check that needs no viewport: export the deformed points + camera per frame and draw them
   over the footage frames (ffmpeg extract + Pillow) — immune to hidden backgrounds or viewport state.
 
+## Matching a tracked file's frame numbers to the edit (verified)
+- Find where the shot sits in the edit by image matching: ffmpeg both to 96×60 grey raw, for each
+  shot frame take the argmin MSE over edit frames. Use only unambiguous matches (static stretches
+  match many frames) and vote on the offset — 35/35 votes gave a 1-frame-exact start.
+- Shift the file: every CTrack key `k.SetTime(cv, k.GetTime() + delta)` — iterate keys **last to
+  first** so none passes its neighbour — on objects, tags, materials and their shaders, render data
+  and video posts, take overrides; then doc min/max, preview min/max, current time, RDATA_FRAMEFROM/TO.
+  Check by comparing the camera matrix at old f vs new f + delta (exactly 0 expected).
+- A static (calibrated) file just needs `doc.SetFps`, RDATA_FRAMERATE and the new range — assert it
+  has no keys first.
+- Footage textures: legacy Bitmap shader → `BITMAPSHADER_TIMING_TIMING = …_TIMING_AREA`,
+  RANGEFROM = delta, RANGETO = delta + (TO − FROM) frames. The Motion Tracker's own footage display
+  keeps footage frame = scene frame, so after a shift it no longer lines up: give the camera a
+  separate viewport-only footage background and don't re-solve (it would rewrite the camera at 0-based frames).
+
 ## Real-world scale
 - Scaling every position (camera path + points) about the origin by K leaves the image identical
   (focal unchanged), so scale is one factor chosen at bake time.

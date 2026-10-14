@@ -63,6 +63,25 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
 - Verified: native simulated Particle Groups (Basic Emitter) render the same way (radius × 3001);
   material = texture tag on the group. Mode 0 hides a group that only feeds a Cloner.
 
+## Image sequences on the Texture node (verified C4D 2026.4, by rendering a barcode sequence)
+- `texturesampler.tex0` sub-ports (Int64 unless noted): `path` (Url), `animation` = Mode
+  (0 Off, 1 Once, 2 Loop, 3 Ping-Pong), `timing` (0 Frame, 1 Time, 2 Range), `framestart`, `frameend`,
+  `framerate`, `startoffset`, `loops`, `rangestart`/`rangeend` (TimeValue).
+- Measured with Mode Once: **Frame** → scene frame f shows `framestart + f` (fps ignored).
+  **Time** → scene time t shows `framestart + startoffset + floor(framerate · t)`; before the first
+  frame the texture is blank, after the last it holds. So with `framestart = N0`,
+  `startoffset = −N0`, `framerate = 30` a sequence numbered in 30 fps edit frames plays at its edit
+  time in a scene of any fps whose time equals edit time (same rule AE uses to nest 30 in 50 fps).
+- `rangestart`/`rangeend` can't be set from Python: `SetPortValue` rejects `maxon.TimeValue`
+  (also wrapped in `maxon.Data`) — use Time + start offset instead of Range.
+- A relative path into a sub-folder works: `maxon.Url("relative:///Sub/seq_00509.png")` resolves
+  like `c4d.GenerateTexturePath(doc_path, "Sub/seq_00509.png", "")` (doc folder or its `tex`).
+- How to test any texture mapping: generate a sequence whose frames encode their own number as
+  black/white stripes plus an always-white reference stripe (an all-black frame is
+  indistinguishable from "no texture"), map it emission-only on a camera-filling plane with UVW
+  projection (a Python texture tag defaults to Spherical), set the camera on the Main take,
+  RenderDocument small frames and decode the stripes.
+
 ## Test renders you can verify
 ```python
 rd = doc.GetActiveRenderData().GetClone()
