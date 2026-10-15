@@ -156,6 +156,24 @@ head.SetMg(sh.GetMatrix(u, realoffset=True, smooth=True))   # u 0..1 = fraction 
   y = 13 cos t − 5 cos 2t − 2 cos 3t − cos 4t. Four hearts rotated 90° apart, tips at the centre,
   make a clover.
 
+## Python Generator that builds geometry from other objects (verified C4D 2026.4)
+- A Python Generator (`c4d.Opython`, code in `OPYTHON_CODE`) can return a hierarchy of generators:
+  a Null holding one `Osweep` per wire (circle profile + `SplineObject`) builds fine.
+- Set `OPYTHON_OPTIMIZE = False` so it sees changes in linked objects. Then cache it yourself:
+  build a signature (clone positions, `path.GetDirty(DIRTYFLAGS_DATA)`, `str(path.GetMg())`,
+  `str(op.GetMg())`, `op.GetDirty(DIRTYFLAGS_DATA)`) and `return op.GetCache()` when it is unchanged.
+  Verified: toggling a Plain effector, editing the path and changing user data all rebuilt it.
+- Clones after effectors: `GeGetMoData(cloner)`, `MODATA_MATRIX` (cloner space) and
+  `MODATA_FLAGS & MOGENFLAG_CLONE_ON` (cleared by a Plain effector's Visibility). With
+  `MGCLONER_FIX_CLONES` (Reset Coordinates) on, a clone's world matrix is `cloner.GetMg() * m`;
+  a point inside the clone source is that `* (~src.GetMg() * tip.GetMg())`. Put the generator
+  below the Cloner in the hierarchy.
+- Read settings by user-data name each call (`{bc[DESC_NAME]: op[did]}`) so IDs aren't hard-coded.
+- `c4d.DESC_DESCRIPTION` does not exist (no tooltip constant). A dict with int keys can't go
+  through `**kw`: pass it as a plain argument.
+- Long code: write it to a file, `py_compile` it, and `open(path).read()` it inside `exec_python`
+  (the Maxon adapter reads local files), instead of pasting it into the call.
+
 ## Deliver the rig
 - Wrap edits in `doc.StartUndo()` / `AddUndo(UNDOTYPE_NEWOBJ | CHANGE, …)` / `EndUndo()`, then `c4d.EventAdd()`.
 - The user may edit the scene while you work (lights and views appeared mid-session). Re-read the

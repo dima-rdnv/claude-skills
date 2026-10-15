@@ -47,6 +47,12 @@ main()
   sim. Redshift rendered native Particle Groups and Cloner instances correctly this way.
 - Point sampling (S > 1) drops fine dust. For contact sheets, box-filter S×S blocks (average RGB and
   alpha) so fine dust survives the downscale.
+- **Your own preview camera:** `bd.SetSceneCamera(cam)` alone was ignored: every shot rendered from
+  the same view. Also set `tk.SetCamera(td, cam)` on `td.GetMainTake()` and `td.GetCurrentTake()`
+  (`td = doc.GetTakeData()`), and use one fresh clone per viewpoint (verified C4D 2026.4).
+- On Windows with the Maxon adapter, `bmp.Save(path, c4d.FILTER_JPG)` to the scratchpad + `Read`
+  is simpler than base64. For a quick look at geometry, strip RS texture tags in the clone and render
+  with `RDATA_RENDERENGINE_STANDARD` and a plain `Mmaterial`.
 
 ## Contact sheet of several frames in one call
 Step 0 → max frame once, and at each wanted frame render and paste into a
