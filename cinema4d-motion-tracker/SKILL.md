@@ -60,6 +60,35 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
 - Then Run 3D Solver (43032, focal "Unknown but Constant" was fine for a long move) and continue
   with the export/extend/bake steps below.
 
+## Full-length track of generated (AI) footage (verified on a 578-frame fly-in → cabin → push-in)
+- **Own 2D tracks beat the tracker's for extending**: `scripts/track_klt.py` (full-res KLT,
+  forward-backward ≤ 0.6 px, gamma-lifted grade, static vignette masked) gave 55k tracks. Check frame
+  numbering against the C4D tracks by comparing per-frame *motion* in a fast stretch (offset 0 gave
+  0.6 px, ±1 gave 3–4 px); comparing positions in slow stretches can't tell.
+- `scripts/vo_extend.py` extends a trusted solve either way: PnP per frame, triangulation from the
+  last ~30 posed frames, sliding-window BA every 5 frames, points that stop fitting are dropped —
+  tolerant of slow morphing. Chain segments with `--init`.
+- **Exclude the person.** In generated footage her head drifts against the car. A push-in solve
+  locked onto her head (all inliers on the face); new car points then missed by 23 px and the solve
+  starved. Label person points by depth band in the trusted range (her 150–250 vs door/frame > 300),
+  pass them as `--person`: the same push-in then solved on seats/door/wheel at 1.2–1.8 px.
+- **Glossy car exteriors don't track**: most corners on paint and glass are reflections that slide
+  with the view. Car-masked VO and "depth from the near-frame model" both gave 8–15 px and the wrong
+  motion (no orbit). What worked: 6–11 hand-picked rigid landmarks per keyframe (headlight corners,
+  mirror tips, windshield-base corners, badge, wheel hubs; read off zoomed crops with a full-res
+  pixel grid) against a car model of the real proportions, jointly fitting keyframe poses + small
+  symmetric model offsets (10 cm prior), seeding weak keyframes from a neighbour so PnP can't flip,
+  then smoothing splines over the keys. Landmark fits 4–16 px; the path became a believable orbit.
+- **It is not one 3D world.** Exterior and cabin disagreed by ~58° and put her head outside the car
+  body. Map cabin → car with a transform that is anchored to the real seat while far (where errors
+  show) and blends into the tracked link frames where the camera reaches the car.
+- Seam smoothing: Gaussian on position + quaternion with a per-frame sigma, but **ramp sigma**
+  (a step in sigma makes its own kink: 1.4 → 6.3 px/f² until ramped). Judge on the CG element's
+  projected acceleration near each seam; exclude points a few cm from the camera (they blow up).
+- Editing a document that isn't active (the user switched files): `d.StartUndo(); d.AddUndo(
+  c4d.UNDOTYPE_CHANGE, op) … d.EndUndo()` ran fine, but `d.GetUndoPtr()` returned None afterwards —
+  treat it as not undoable and keep the old data recoverable. Never switch the user's active doc.
+
 ## Extending a solve past an occlusion (verified: 29–183 → 29–241, 2–8 px median)
 1. `scripts/export_solve.py` (in C4D, edit OUT) → solves.json: solved cameras, 3D features, every 2D track.
 2. `scripts/extend_solve.py solves.json extended.json [END_A]` (local, `uv run --with numpy --with scipy
