@@ -48,6 +48,22 @@ and waits for the JSON. Number scripts (`057_render.jsx`) so `done/` reads as a 
 - To time an event to footage (a hand gesture, a cut), render the parent at `[4,4]` every 0.04 s
   around it and grid the frames; crop the region of interest.
 
+## Render queue exports (verified, AE 2026)
+- `rq.items.add(comp)`, `item.setSettings({"Time Span": "Work Area Only", "Quality": …})` and
+  `om.file = new File(".../name_[#####].png")` work. **Format, Channels, Depth and Color are not
+  scriptable**: `om.setSettings({"Format": …})` throws "read-only", and
+  `getSettings(GetSettingsFormat.STRING_SETTABLE)` lists only crop/resize/audio/file info/video output.
+- To copy an existing item's format: `saveAsTemplate(name)` on its output module, then
+  `applyTemplate(name)` on the new one. AE refuses `saveAsTemplate` on a DONE item, so
+  `ref.duplicate()` first, save from the duplicate, `remove()` it. The template **persists** in the
+  user's list (no API to delete it), so ask before creating one.
+- Compare `getSettings(GetSettingsFormat.STRING)` of both items afterwards (Format, Channels,
+  Depth, Color, Use Comp Frame Number, Time Span…) to prove they match before rendering.
+- `rq.render()` is synchronous: the bridge's JSON arrives when it's done (347 frames of a 2658 px UI
+  comp ≈ 100 s); give `send.sh` a long timeout. Only QUEUED items render; DONE ones are skipped.
+- A script that throws midway keeps its earlier edits (e.g. a half-configured queue item) — check
+  the queue before retrying, and guard against adding a second copy.
+
 ## Inspecting
 - Find comps by name over `app.project.item(i)` (`CompItem`), use ids afterwards (`itemByID`).
 - `comp.usedIn` + the layer's `startTime`, `stretch`, `timeRemapEnabled` give the time mapping. A
