@@ -41,6 +41,24 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
 - `CallButton(mt, 20009)` (Create Background Object) did nothing from a script.
 - Stitching two independent solves via shared features failed (8 shared points, 148° error) —
   extend the trusted solve instead (next section).
+- A second case failed too: an end-segment solve over an 80-frame overlap came back
+  **depth-reversed** against the main solve (mirror fits didn't help either). Umeyama on shared points
+  near the camera and pose alignment over the overlap both gave nonsense. On generated (AI) footage the
+  scene geometry is not consistent across a long move, so two solves can genuinely disagree. Keep the
+  trusted range and say which frames have no track.
+
+## Tracking new footage from a script (verified, 578-frame 50 fps mp4)
+- Work in a separate document at the footage's fps (`BaseDocument()`, `SetFps`, range,
+  `InsertBaseDocument`); the user's file stays untouched. `mt = c4d.BaseObject(c4d.Omotiontracker)`,
+  `mt[10500] = path` → `ExecutePasses` loads it; `GetFootageData()` gives resolution and frame range.
+- Limit with frame start/stop 10509/10510 (skip slates and other set-ups), number of tracks 41052.
+- **Create Auto Tracks = `CallButton(mt, 41070)`** at the current frame (`SetTime` + `ExecutePasses`
+  first; the document active, the tracker selected). 41008 (the "Auto Track" group) does nothing.
+- Track forward/backward from the current frame: `CallButton(mt, 41009)` / `41010`. They run in
+  the background; poll track count and each track's last/first frame from later calls. Starting in the
+  middle of the shot and tracking both ways gave 507 tracks, 76–158 alive per frame.
+- Then Run 3D Solver (43032, focal "Unknown but Constant" was fine for a long move) and continue
+  with the export/extend/bake steps below.
 
 ## Extending a solve past an occlusion (verified: 29–183 → 29–241, 2–8 px median)
 1. `scripts/export_solve.py` (in C4D, edit OUT) → solves.json: solved cameras, 3D features, every 2D track.
@@ -98,6 +116,13 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   known size (ear ≈ 6 cm) and focal; car axes from the vanishing point of two front-to-back lines;
   scene scale (units/cm) from how a point at that depth must move under the camera drift to match
   its 2D track. *(Accuracy unverified — ask for a by-eye check.)*
+- **Re-shot footage of the same set-up** (new clip, same framing roughly): pick one frame of the new
+  clip that matches the old still, click 4+ landmarks (eye, ear, window corner…) in both, fit a 2D
+  similarity `S2` (old px → new px) and use `A = K_t⁻¹·S2·K_s` in the formula above. The screen then
+  keeps its place relative to the person. Verified by overlay, old vs new frame.
+- **Checking the old placement**: project the *inner-local* coordinates (= the source file's world)
+  through the source camera — not the wrapped world points, which already live in the new track's
+  space and land anywhere through the old camera.
 - Deformed geometry of a generator with a deformer child: `op.GetDeformCache()` on the generator is
   None — walk `op.GetCache()` and take each point object's `GetDeformCache()`; points are in `op`'s space.
 - Offline check that needs no viewport: export the deformed points + camera per frame and draw them
