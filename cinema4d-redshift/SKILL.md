@@ -93,6 +93,14 @@ bmp = c4d.bitmaps.MultipassBitmap(480, 270, c4d.COLORMODE_RGB)
 res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLAGS_EXTERNAL)  # 0 = ok
 ```
 - Returns well under the 60 s limit at this size. Set `doc.SetTime(...)` first.
+- **Never RenderDocument a `TakeToDocument()` copy with Redshift** (verified 2026.4): at 961×600 it
+  held C4D's main thread for 8+ minutes until the user had to restart C4D — unsaved work was lost.
+  The same scene's live document rendered 400×250 in < 60 s. Render a take by making it current on
+  the live doc (restore it after), keep frames small, or use the adapter's `start_render` (own thread).
+  After a long synchronous call the adapter times out on everything (`ping` too) — don't queue more.
+- A geometry/texture placement check needs no render: export the deformed mesh + UVs, project it,
+  and warp the texture frame per quad onto the plate (OpenCV `getPerspectiveTransform` per quad,
+  combine with `max`, skip quads within a few cm of the camera — they project huge and paint black).
 - Verify numerically: sample `bmp.GetPixel(x, y)` in the region of interest and bucket colours
   (a magenta default on a lookup node = "attribute not found").
 - To look at it (any OS, no files): save to `c4d.storage.MemoryFileStruct` as JPEG, print base64,
