@@ -136,6 +136,12 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   tracked head). Keep everything live by SVD `M = UΣVᵀ` → outer null (axes = U·σ, position) holding
   an inner null (axes = Vᵀ columns) holding the clones with their original matrices. Verified 0.000 px
   on the deformed geometry through C4D's own cameras; the proxy landed 1.8 cm from the tracked head.
+- **Keep lights out of that wrapper.** It is non-uniform + sheared (axes 1.6/0.7/0.7, 16° shear on
+  the light). A Redshift area light inside it threw a skewed cone with a hot stripe along one edge
+  and ~3 EV less light; geometry and volumes are fine. C4D can't hold a clean frame under a sheared
+  parent (`SetMg` of an orthonormal matrix still came back 6.5° skewed), so move the light to the top
+  level with an orthonormal world matrix (same position and axis) — take overrides follow the
+  object. Re-check exposure afterwards: the light gets much brighter.
 - Anchor at the **actual shared image** — the clip's last real frame — not the document's last frame:
   a tracker range often runs one frame past the clip (here 0–241 for frames 0–240), and anchoring one
   frame late left a 2–11 px jump at the cut. Later edits to the source setup copy over by giving the
