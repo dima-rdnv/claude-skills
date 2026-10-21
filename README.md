@@ -1,10 +1,10 @@
-# Claude skills for Houdini, Cinema 4D & After Effects
+# Claude skills for Houdini, Cinema 4D, After Effects & Premiere Pro
 
 [Agent Skills](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) that teach
 Claude to drive **SideFX Houdini** and **Maxon Cinema 4D** through MCP servers, and **Adobe After
-Effects** through a small file-based script bridge: particle sims, VDB surfacing, Alembic hand-offs,
-native C4D particles, rigs and takes, Redshift materials, flipbooks, tidy node networks, and
-retiming AE animation to a voice-over.
+Effects** and **Premiere Pro** through small file-based script bridges: particle sims, VDB surfacing,
+Alembic hand-offs, native C4D particles, rigs and takes, Redshift materials, flipbooks, tidy node
+networks, retiming AE animation to a voice-over, and relinking Premiere projects to transcoded media.
 
 Everything here comes from real production sessions. A recipe gets in only after it has been tested
 in a real scene. Anything else is marked *(unverified)*. Failed approaches are written down too, so
@@ -29,6 +29,7 @@ Claude doesn't try them again.
 | [cinema4d-motion-tracker](cinema4d-motion-tracker/SKILL.md) | Motion Tracker: diagnosing a solve that stops, solver from Python, extending a camera solve past an occlusion (PnP + triangulation + bundle adjustment scripts), real-world scale from a person, baking a clean camera |
 | [cinema4d-takes](cinema4d-takes/SKILL.md) | Takes: reading and adding overrides (incl. user data), override groups, per-take camera/render data, TakeToDocument |
 | [aftereffects-bridge](aftereffects-bridge/SKILL.md) | After Effects without MCP: a file-based ExtendScript bridge ([ClaudeBridge.jsx](aftereffects-bridge/scripts/ClaudeBridge.jsx)), safe script hand-off, inspecting comps, preview renders, retiming keys to a VO, building UI layers |
+| [premiere-bridge](premiere-bridge/SKILL.md) | Premiere Pro without MCP: a self-signed CEP panel ([panel/](premiere-bridge/panel)) that runs `.jsx` from an inbox, CEP 12 signing workaround, inspecting sequences and bins, safe frame export, relinking to transcoded media with before/after proof, HEVC settings that keep the picture identical |
 | [vo-timing](vo-timing/SKILL.md) | Word-level voice-over timings (faster-whisper) → frame numbers |
 | [project-notes](project-notes/SKILL.md) | How to keep per-production notes across sessions, separate from the skills |
 
@@ -42,7 +43,10 @@ the sub-skills to load next.
   - Cinema 4D: [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp)
   - After Effects: no MCP needed — run the included
     [ClaudeBridge.jsx](aftereffects-bridge/scripts/ClaudeBridge.jsx) panel (see `aftereffects-bridge`)
-- Tested with Houdini 21–22 Indie, Cinema 4D 2026, After Effects 2026 and Redshift. Install notes, including the
+  - Premiere Pro: no MCP needed — install the included CEP panel with
+    [install.ps1](premiere-bridge/scripts/install.ps1) (see `premiere-bridge`; Windows, self-signed
+    with Adobe's ZXPSignCmd because CEP 12 ignores debug mode)
+- Tested with Houdini 21–22 Indie, Cinema 4D 2026, After Effects 2026, Premiere Pro 2026 and Redshift. Install notes, including the
   pitfalls we hit, are in `houdini-mcp` and `cinema4d-mcp`. For a step-by-step Cinema 4D setup on
   Windows or macOS, see [cinema4d-mcp/SETUP.md](cinema4d-mcp/SETUP.md).
 

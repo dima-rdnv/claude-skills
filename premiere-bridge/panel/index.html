@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Claude Bridge</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; padding: 8px;
+    background: #232323; color: #d4d4d4; font: 12px/1.4 "Segoe UI", system-ui, sans-serif;
+  }
+  #status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #status.off { color: #e0a040; }
+  #status.err { color: #e06a6a; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button {
+    background: #3a3a3a; color: #dddddd; border: 1px solid #555555; border-radius: 3px;
+    padding: 3px 10px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #474747; }
+  #log {
+    flex: 1; min-height: 40px; overflow: auto; background: #1b1b1b; border: 1px solid #333333;
+    border-radius: 3px; padding: 4px 6px; font: 11px/1.45 Consolas, monospace; white-space: pre-wrap;
+  }
+  .fail { color: #e88888; }
+</style>
+</head>
+<body>
+  <div id="status">Starting…</div>
+  <div class="row">
+    <button id="pause">Pause</button>
+    <button id="check">Check now</button>
+    <button id="reload" title="Re-read host.jsx after editing it">Reload host</button>
+    <button id="open" title="Open the bridge folder">Folder</button>
+  </div>
+  <div id="log"></div>
+<script>
+/*  Claude Bridge panel: polls the ExtendScript side (host.jsx) once a second while open.
+    Ticks never overlap: the next one is scheduled when the previous evalScript returns. */
+(function () {
+  "use strict";
+  var cep = window.__adobe_cep__;
+  var POLL_MS = 1000, BEAT_MS = 5000;
+  var paused = false, busy = false, busySince = 0, lastBeat = 0, timer = null, root = "", runs = 0;
+  var statusEl = document.getElementById("status"), logEl = document.getElementById("log");
+  var pauseBtn = document.getElementById("pause");
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function log(text, cls) {
+    var d = new Date(), line = document.createElement("div");
+    line.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + "  " + text;
+    if (cls) line.className = cls;
+    logEl.insertBefore(line, logEl.firstChild);
+    while (logEl.childNodes.length > 200) logEl.removeChild(logEl.lastChild);
+  }
+  function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls || ""; }
+  function showIdle() {
+    if (paused) setStatus("Paused  ·  " + runs + " run", "off");
+    else setStatus("Listening…  ·  " + runs + " run  ·  inbox: " + root + "/inbox");
+  }
+  function evalHost(script, cb) {
+    if (!cep) { setStatus("Not running inside Premiere (no CEP).", "err"); return; }
+    cep.evalScript(script, function (res) { if (cb) cb(res); });
+  }
+  function parse(res) { try { return JSON.parse(res); } catch (e) { return null; } }
+
+  function tick(force) {
+    if (busy) return;
+    busy = true;
+    busySince = Date.now();
+    var now = busySince, beat = now - lastBeat >= BEAT_MS;
+    if (beat) lastBeat = now;
+    evalHost("ClaudeBridge.tick(" + (force || !paused) + "," + beat + "," + paused + ")", function (res) {
+      busy = false;
+      var r = parse(res);
+      if (!r) {
+        setStatus("Host script not loaded (" + res + "). Press Reload host.", "err");
+      } else if (r.error) {
+        log(r.error, "fail");
+      } else {
+        runs = r.runs;
+        r.messages.forEach(function (m) { log("  " + m); });
+        r.ran.forEach(function (x) {
+          log((x.ok ? "OK   " : "FAIL ") + x.file + " (" + x.ms + " ms)" + (x.ok ? "" : " – " + x.error), x.ok ? "" : "fail");
+        });
+        showIdle();
+      }
+      schedule();
+    });
+  }
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { tick(false); }, POLL_MS);
+  }
+  // A script that never returns blocks the next tick; show how long we have been waiting.
+  setInterval(function () {
+    var s = Math.round((Date.now() - busySince) / 1000);
+    if (busy && s >= 3) setStatus("Waiting for Premiere… " + s + " s (a script is running; see status.json)", "off");
+  }, 1000);
+  function start() {
+    evalHost("ClaudeBridge.info()", function (res) {
+      var info = parse(res);
+      if (info) {
+        root = info.root;
+        log("Bridge " + info.bridge + " started · Premiere " + info.premiere);
+      } else {
+        log("Host script not loaded: " + res, "fail");
+      }
+      tick(false);
+    });
+  }
+
+  pauseBtn.onclick = function () {
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+    lastBeat = 0;
+    showIdle();
+  };
+  document.getElementById("check").onclick = function () { tick(true); };
+  document.getElementById("open").onclick = function () { evalHost("ClaudeBridge.openRoot()"); };
+  document.getElementById("reload").onclick = function () {
+    var dir = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\/\/?/, "");
+    evalHost("$.evalFile(" + JSON.stringify(dir + "/host.jsx") + "); ClaudeBridge.info()", function (res) {
+      var info = parse(res);
+      if (info) { root = info.root; log("Host reloaded (bridge " + info.bridge + ")"); showIdle(); }
+      else log("Reload failed: " + res, "fail");
+    });
+  };
+
+  start();
+})();
+</script>
+</body>
+</html>
