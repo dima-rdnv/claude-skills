@@ -108,6 +108,14 @@ destructive, work on a copy (`app.project.saveAs`, see Relinking) or have the us
   Template items (`.aegraphic`): they can't be relinked by script.
 - Premiere keeps linked media open. To replace an `.mp4` in place, relink the item elsewhere (e.g.
   back to the `.mov`), overwrite the file, then relink again.
+- An image-sequence item (`X.0001.png`) relinks to a movie with `changeMediaPath` too. A 172-frame
+  RGBA PNG sequence became a lossless PNG-in-MOV (`ffmpeg -framerate 25 -start_number 1 -i
+  X.%04d.png -c:v png -pix_fmt rgba -f mov`, the same 102 MB as the frames). It kept its 25 fps
+  interpretation, length and alpha settings, and the composite check frames were pixel-identical.
+  Check alpha before choosing MP4: `getFootageInterpretation()` gives `frameRate`, `alphaUsage`,
+  `ignoreAlpha`, and Pillow shows whether alpha really drops below 255.
+- `changeMediaPath` also works on items that went offline (files removed outside Premiere).
+  `item.isOffline()` finds them. Check `isOffline` after any file moves the user may make too.
 - **Prove nothing moved**: before and after, snapshot every clip in the affected sequences (seq, track,
   index, name, start/end/in/out ticks) and export a check frame mid-clip for each changed medium.
   Ticks must be identical. Compare frames with numpy: PSNR plus mean level shift. Healthy HEVC
