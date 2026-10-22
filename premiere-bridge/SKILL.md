@@ -47,7 +47,8 @@ destructive, work on a copy (`app.project.saveAs`, see Relinking) or have the us
 - `err.line` is the line in the script file. `JSON` exists in Premiere 26.5's ExtendScript.
 - DOM objects stringify as `"<Project>"`, `"<Sequence>"`: copy the fields you need into plain objects.
 - The regex literal `/\\/g` is a **SyntaxError** in ExtendScript; use `s.split("\\").join(...)` or
-  `new RegExp("\\\\", "g")`. Backslash paths written through sed/heredocs get mangled easily
+  `new RegExp("\\\\", "g")`. ExtendScript is ES3: a reserved word as an object key (`{ in: … }`)
+  is a SyntaxError too ("Illegal use of reserved word"). Backslash paths written through sed/heredocs get mangled easily
   (`"y:\bbc"` is a backspace): build them with `String.fromCharCode(92)` or `File.fsName`.
 - After only read-only scripts (plus `enableQE`, `exportFramePNG`, `openSequence`,
   `setPlayerPosition`) the title bar showed the project as modified (`*`); which call does it is
@@ -66,7 +67,18 @@ destructive, work on a copy (`app.project.saveAs`, see Relinking) or have the us
   `item.treePath`, `item.getMediaPath()`, `item.isOffline()`.
 - "Used in these timelines, including nested ones": recurse through `clip.projectItem.nodeId` →
   sequence. Subclips (`X.mp4.Subclip01`) are separate items sharing the master's media path, so
-  count a media path as used when any used item has it.
+  count a media path as used when any used item has it. `getInPoint()/getOutPoint()` on a subclip
+  *project item* returned the whole file (0 to full length), not the subclip's range: take used
+  source ranges from the track items' `inPoint/outPoint` (master-media time, timecode-based).
+- `clip.getSpeed()` (1, 2, 0.75…) and `clip.isSpeedReversed()` (0/1) work on track items.
+  `seq.getWorkAreaInPoint()/getWorkAreaOutPoint()` return seconds as strings, like `getInPoint`.
+- **Timelines often park material after the edit.** One 1-minute edit ran to 94 minutes, with two
+  full 30-minute B-roll files laid end to end after its out point. Before calling anything "used",
+  compare clip positions with the sequence's out point and look for a big gap, and ask which
+  counts. In that project the master items and their subclips were both used, several of them at
+  far-apart points. An item links to one file only, so cutting a source into separate pieces
+  cannot serve such an item. *(Unverified idea: re-encode at full length
+  with unused stretches blacked out, which keeps timing and every link intact.)*
 - ProjectItem in 26.5 has no delete for clips (`deleteBin` only), plus `moveBin`, `changeMediaPath`,
   `canChangeMediaPath`, `findItemsMatchingMediaPath`, `isMergedClip`, `isMulticamClip`,
   `setOffline`, `createSubClip`, `saveProjectSnapshot` (list from `item.reflect.methods`).
