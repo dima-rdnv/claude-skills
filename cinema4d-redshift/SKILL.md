@@ -55,6 +55,24 @@ left, towards a camera looking down +Z) and H = normalize(L + (0, 0, -1)). Gold 
 dark (0.30, 0.13, 0.02), gold (1.0, 0.72, 0.28), highlight (1.0, 0.93, 0.70) (linear).
 Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads as pale gold.
 
+## Recipes: atmosphere rim and a screen-space gradient sky (verified look, C4D 2026.4)
+- **Rim** on a shell sphere just above the globe: `dot(state.normal, state.raydirection)` →
+  `rsmathrange` (−1…0 → 0…1) → `rsmathsaturate` → `rsmathpow` (exp 5–7) → `rscolormix(black, rim)`
+  → `emission_color`; the same mask → `rscolormix(black, white)` → `opacity_color`. Base/refl weight 0.
+- **Gradient sky**: a Plane (`PRIM_AXIS` 5 = −Z, UVW projection) parented to the camera at local z,
+  width = z · aperture / focal (+1 %). `dot(state.uvwcoord, (0,1,0))` = v, and **v = 1 at the top
+  of frame**. One segment `range(v) → saturate → rsmathmul(t, t) → colormix(top, horizon)` is smooth;
+  two linear segments joined by colormix showed a visible band at the join.
+- `rsmathrange` accepts old_min > old_max (inverted mapping) — verified.
+- Emission hex values rendered ~2–2.5 stops darker through the scene's view transform: measure the
+  render and raise emission weight (3–6 here) rather than trusting the hex.
+- Graph edits inside `BeginTransaction` are not in exec_python's undo (`add_undo_change` covers
+  objects/tags only) — build on new or cloned materials and swap texture-tag links (undoable).
+- (cause unknown) an `rsmathpow` inserted between a saturate and a colormix `mixamount` rendered 0;
+  a `rsmathmul(t, t)` in the same spot worked.
+- Many RS point lights inside cloned rigs (66 here) made a 960×540 preview crawl (~15 % after 80 s);
+  with them off it took 8 s.
+
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom
   objects, **5 Optimized Spheres**), 3001 Scale Multiplier (× the particle radius channel).
