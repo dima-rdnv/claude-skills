@@ -87,6 +87,17 @@ open(sys.argv[2], 'wb').write(base64.b64decode(re.search(r'B64:([A-Za-z0-9+/=]+)
 Render small (480×675), loop every 2nd pixel, and count `r+g+b > 40` plus the bbox of lit pixels.
 This confirms something rendered, and where, before spending tokens on an image.
 
+## Matching a reference framing of a planet limb (verified C4D 2026.4)
+- Measure the reference: per column take the brightest pixel (the rim), least-squares fit a circle.
+  A clean planet limb fits to <1 px; note apex y, centre and radius as fractions of H and W.
+- Solve the camera numerically: for a chosen focal, unknowns are distance D to the sphere centre and
+  the tilt of the view axis above the centre direction. The silhouette is every ray whose angle to the
+  centre is asin(R/D); fit its top edge to the reference circle (scipy `least_squares`). Azimuth and
+  elevation do not change the shape, so keep the existing camera's direction for the same globe side.
+- Use R of the shell that actually renders (a render-visible water/atmosphere sphere, not the hidden
+  editor-only one). 50–135 mm all matched to ≤2 px at 1920; at 100 mm D = 3.84·R, tilt 13.6° gave
+  apex 0.375H vs 0.376H in the reference.
+
 ## Reference footage and PSDs in the sandbox
 - ProRes 4444 with alpha over a colour, as a contact sheet:
   `ffmpeg -f lavfi -i color=c=0x1a3a2a:s=1920x1080 -i ref.mov -filter_complex "[0][1]overlay=shortest=1,select='not(mod(n\,16))',scale=480:-1,tile=4x4" -frames:v 1 -vsync vfr sheet.png`

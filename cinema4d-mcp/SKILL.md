@@ -36,6 +36,9 @@ socket plugin described below. Notes:
   tracked points and scale proxies against footage. It only captures the **active** document, and it
   can keep returning a stale image (`identical_to_previous: true`, same digest) after real changes, even
   after `DrawViews(FORCEFULLREDRAW)` — then verify numerically or render instead.
+- `render_preview_image` renders through the **Main take's camera**, not the viewport's: changing
+  only `td.GetMainTake().SetCamera(td, cam)` changed the render while the viewport camera stayed put.
+  It runs on its own thread (~40 s for a Redshift preview at 960×540): call again to collect.
 - The user may switch the active document while you work: for read-only steps find documents by name
   instead of using `doc`; for edits assert `doc.GetDocumentName()` first so a switch aborts cleanly.
 - Copy objects + their materials between open documents with links intact: `trans = c4d.AliasTrans();
