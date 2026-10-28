@@ -5,9 +5,10 @@
     runs any .jsx file it finds there (one undo step each, named "Claude: <file>"),
     writes the result to  outbox\<file>.json  and moves the script to  done\.
 
-    Bridge folder: the one picked with "Folder…" (remembered in AE's settings). Until one is
-    picked: the folder this file sits in, or  Documents\ClaudeBridge  when this file is installed
-    in one of AE's Scripts folders (AE lists every script there) or its folder is read-only.
+    Bridge folder: the one set with  ClaudeBridge.useFolder(path)  from a bridge script (ask
+    Claude to switch it; remembered in AE's settings). Until then: the folder this file sits in, or
+    Documents\ClaudeBridge  when this file is installed in one of AE's Scripts folders (AE lists
+    every script there) or its folder is read-only.
 
     Install:  File > Scripts > Install ScriptUI Panel...  > pick this file, restart AE, open
               Window > ClaudeBridge.jsx and dock it - it then opens with every launch. Docked as a
@@ -15,7 +16,7 @@
     Or once:  File > Scripts > Run Script File...  > pick this file.
     Needs:    Edit > Preferences > Scripting & Expressions >
               "Allow Scripts to Write Files and Access Network" (on).
-    Stop:     press Pause, or close the panel.
+    Stop:     the Stop / Start button, or close the panel.
 */
 (function (thisObj) {
     var SECTION = "ClaudeBridge", KEY = "root";
@@ -89,22 +90,20 @@
     B = $.global.ClaudeBridge = { busy: false, paused: false, taskId: 0, count: 0, stringify: stringify, readText: readText, writeText: writeText, ROOT: ROOT };
 
     // ---------- UI ----------
-    // buttons and status share the top row, so the panel still works shrunk to a strip or docked
+    // the button and status share the top row, so the panel still works shrunk to a strip or docked
     // as a tab; the log below takes whatever height is left. Not docked, it is a "window" (not a
     // palette): AE makes palettes tool windows, which Windows gives no minimize button.
     var win = (thisObj instanceof Panel) ? thisObj : new Window("window", "Claude Bridge", undefined, { resizeable: true, minimizeButton: true });
     win.orientation = "column"; win.alignChildren = ["fill", "top"]; win.margins = 6; win.spacing = 4;
-    var row = win.add("group"); row.alignment = ["fill", "top"]; row.spacing = 4;
-    var pauseBtn = row.add("button", undefined, "Pause");
-    var runBtn = row.add("button", undefined, "Check now");
-    var folderBtn = row.add("button", undefined, "Folder…");
+    var row = win.add("group"); row.alignment = ["fill", "top"]; row.spacing = 6;
+    var runBtn = row.add("button", undefined, "Stop");
     var status = row.add("statictext", undefined, "", { truncate: "end" });
     status.alignment = ["fill", "center"]; status.preferredSize = [220, 18]; status.minimumSize = [40, 18];
     var log = win.add("edittext", undefined, "", { multiline: true, readonly: true, scrolling: true });
     log.alignment = ["fill", "fill"]; log.preferredSize = [480, 120]; log.minimumSize = [40, 0];
     function addLog(s) { var d = new Date(); var ts = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2); log.text = ts + "  " + s + "\n" + log.text; }
     function idle() {
-        status.text = (B.paused ? "Paused" : "Listening…") + " (inbox: " + INBOX.fsName + ")" + (B.count ? "  ·  " + B.count + " run" : "");
+        status.text = (B.paused ? "Stopped" : "Listening…") + " (inbox: " + INBOX.fsName + ")" + (B.count ? "  ·  " + B.count + " run" : "");
         status.helpTip = INBOX.fsName;
     }
     // a docked panel that was closed leaves its controls invalid; the task must not keep firing then
@@ -112,8 +111,9 @@
     B.log = addLog;
     B.win = win;
 
-    // switch to another bridge folder and remember it; returns "" or the reason it failed.
-    // The calling script's own result still goes to the folder it came from.
+    // switch to another bridge folder and remember it (the panel has no folder button: Claude does
+    // this on request); returns "" or the reason it failed. The calling script's own result still
+    // goes to the folder it came from.
     B.useFolder = function (path) {
         path = slash(path);
         if (inScripts(path)) return "pick a folder outside After Effects' Scripts folders";
@@ -162,14 +162,11 @@
         B.busy = false;
         idle();
     };
-    pauseBtn.onClick = function () { B.paused = !B.paused; pauseBtn.text = B.paused ? "Resume" : "Pause"; idle(); };
-    runBtn.onClick = function () { B.tick(); };
-    folderBtn.onClick = function () {
-        if (B.busy) return;
-        var f = new Folder(ROOT).selectDlg("Claude Bridge folder (inbox, outbox and done go here)");
-        if (!f) return;
-        var err = B.useFolder(f.fsName);
-        if (err) alert("Claude Bridge: " + err);
+    runBtn.onClick = function () {
+        B.paused = !B.paused;
+        runBtn.text = B.paused ? "Start" : "Stop";
+        addLog(B.paused ? "Stopped" : "Started");
+        idle();
     };
 
     B.taskId = app.scheduleTask("if ($.global.ClaudeBridge) $.global.ClaudeBridge.tick();", 1000, true);

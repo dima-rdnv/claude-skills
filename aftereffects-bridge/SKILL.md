@@ -10,12 +10,13 @@ a minimizable window when run as a plain script) that, while open, checks `<ROOT
 each `*.jsx` there inside `(function(){ ... })()` (so a top-level `return` works) as **one undo
 step named `Claude: <file>`**, writes `<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}`
 and moves the script to `done/`.
-`ROOT` is the folder picked with the panel's **Folder…** button, remembered in AE's settings
-(`app.settings`, section `ClaudeBridge`, key `root`). Until one is picked: the script's own folder,
-or `Documents/ClaudeBridge` when the script sits in one of AE's Scripts folders (AE lists every
-script under them, so inbox/done must not live there) or its folder is read-only. The status line
-shows the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`, `writeText`,
-`log`, `useFolder`, `win` to scripts.
+`ROOT` is the folder last set with `ClaudeBridge.useFolder(path)` (the panel has no folder button;
+you switch it when the user asks), remembered in AE's settings (`app.settings`, section
+`ClaudeBridge`, key `root`). Until then: the script's own folder, or `Documents/ClaudeBridge` when
+the script sits in one of AE's Scripts folders (AE lists every script under them, so inbox/done
+must not live there) or its folder is read-only. The panel has one **Stop / Start** button and a
+status line showing the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`,
+`writeText`, `log`, `useFolder`, `win` to scripts.
 
 ## Finding / starting it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
@@ -36,9 +37,10 @@ shows the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`
   Scripting & Expressions › *Allow Scripts to Write Files and Access Network*.
 - You can't start it yourself: `AfterFX.exe -r <ClaudeBridge.jsx>` against an already running AE
   2026 did nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
-- A script that sits in `inbox/` for more than a few seconds means the panel is **paused or
-  closed** (AE itself still reports "Responding"), or listening in another folder (the user may
-  have started a different copy: ask what the status line says). Don't resend.
+- A script that sits in `inbox/` for more than a few seconds means the panel is **stopped**
+  (status reads `Stopped…`: ask the user to press Start) or **closed** (AE itself still reports
+  "Responding"), or listening in another folder (the user may have started a different copy: ask
+  what the status line says). Don't resend; it runs as soon as the bridge is back.
 - Wrong folder: a script calling `$.global.ClaudeBridge.useFolder(path)` switches and remembers it.
   It returns `""` or the reason (it refuses AE's Scripts folders and unwritable folders). The
   calling script's own JSON still lands in the folder it came from.
