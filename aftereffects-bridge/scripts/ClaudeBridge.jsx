@@ -1,30 +1,47 @@
 /*  Claude Bridge for After Effects
     --------------------------------
     Lets Claude (Cowork) drive After Effects without an MCP server.
-    While this panel is open it checks  inbox\  next to this file every second,
+    While this panel is open it checks  <bridge folder>\inbox  every second,
     runs any .jsx file it finds there (one undo step each, named "Claude: <file>"),
     writes the result to  outbox\<file>.json  and moves the script to  done\.
-    If this file's folder is read-only, it uses  Documents\ClaudeBridge  instead.
 
-    Start:  File > Scripts > Run Script File...  > pick this file.
-    Needs:  Edit > Preferences > Scripting & Expressions >
-            "Allow Scripts to Write Files and Access Network" (on).
-    Stop:   close the panel (or press Pause).
+    Bridge folder: the one picked with "Folder…" (remembered in AE's settings). Until one is
+    picked: the folder this file sits in, or  Documents\ClaudeBridge  when this file is installed
+    in one of AE's Scripts folders (AE lists every script there) or its folder is read-only.
+
+    Install:  File > Scripts > Install ScriptUI Panel...  > pick this file, restart AE, open
+              Window > ClaudeBridge.jsx and dock it - it then opens with every launch. Docked as a
+              tab behind another panel, or shrunk to a strip, it keeps running.
+    Or once:  File > Scripts > Run Script File...  > pick this file.
+    Needs:    Edit > Preferences > Scripting & Expressions >
+              "Allow Scripts to Write Files and Access Network" (on).
+    Stop:     press Pause, or close the panel.
 */
 (function (thisObj) {
+    var SECTION = "ClaudeBridge", KEY = "root";
     function slash(p) { return String(p).replace(/\\/g, "/"); }
-    var ROOT = "";
-    try { ROOT = slash(new File($.fileName).parent.fsName); } catch (e) {}
-    if (!ROOT || !(new Folder(ROOT + "/inbox").exists || new Folder(ROOT + "/inbox").create())) {
-        ROOT = slash(Folder.myDocuments.fsName) + "/ClaudeBridge";
-        new Folder(ROOT).create();
+    function inScripts(path) { return /\/Scripts(\/(ScriptUI Panels|Startup|Shutdown))?$/i.test(path); }
+
+    var ROOT, INBOX, OUTBOX, DONE;
+    function setRoot(path) {
+        var r = new Folder(path);
+        if (!r.exists && !r.create()) return false;
+        var i = new Folder(path + "/inbox"), o = new Folder(path + "/outbox"), d = new Folder(path + "/done");
+        if (!i.exists) i.create();
+        if (!o.exists) o.create();
+        if (!d.exists) d.create();
+        if (!i.exists || !o.exists || !d.exists) return false;
+        ROOT = path; INBOX = i; OUTBOX = o; DONE = d;
+        return true;
     }
-    var INBOX = new Folder(ROOT + "/inbox");
-    var OUTBOX = new Folder(ROOT + "/outbox");
-    var DONE = new Folder(ROOT + "/done");
-    if (!INBOX.exists) INBOX.create();
-    if (!OUTBOX.exists) OUTBOX.create();
-    if (!DONE.exists) DONE.create();
+    function defaultRoot() {
+        var here = "";
+        try { here = slash(new File($.fileName).parent.fsName); } catch (e) {}
+        if (here && !inScripts(here) && setRoot(here)) return here;
+        return slash(Folder.myDocuments.fsName) + "/ClaudeBridge";
+    }
+    var saved = app.settings.haveSetting(SECTION, KEY) ? app.settings.getSetting(SECTION, KEY) : "";
+    if (!(saved && setRoot(saved))) setRoot(defaultRoot());
 
     function q(s) {
         s = String(s);
@@ -72,23 +89,49 @@
     B = $.global.ClaudeBridge = { busy: false, paused: false, taskId: 0, count: 0, stringify: stringify, readText: readText, writeText: writeText, ROOT: ROOT };
 
     // ---------- UI ----------
-    var win = (thisObj instanceof Panel) ? thisObj : new Window("palette", "Claude Bridge", undefined, { resizeable: true });
-    win.orientation = "column"; win.alignChildren = ["fill", "top"]; win.margins = 10; win.spacing = 6;
-    var status = win.add("statictext", undefined, "Listening… (inbox: " + INBOX.fsName + ")", { truncate: "end" });
-    status.preferredSize = [360, 18];
-    var log = win.add("edittext", undefined, "", { multiline: true, readonly: true, scrolling: true });
-    log.preferredSize = [360, 140];
-    var row = win.add("group"); row.alignment = ["fill", "top"];
+    // buttons and status share the top row, so the panel still works shrunk to a strip or docked
+    // as a tab; the log below takes whatever height is left. Not docked, it is a "window" (not a
+    // palette): AE makes palettes tool windows, which Windows gives no minimize button.
+    var win = (thisObj instanceof Panel) ? thisObj : new Window("window", "Claude Bridge", undefined, { resizeable: true, minimizeButton: true });
+    win.orientation = "column"; win.alignChildren = ["fill", "top"]; win.margins = 6; win.spacing = 4;
+    var row = win.add("group"); row.alignment = ["fill", "top"]; row.spacing = 4;
     var pauseBtn = row.add("button", undefined, "Pause");
     var runBtn = row.add("button", undefined, "Check now");
+    var folderBtn = row.add("button", undefined, "Folder…");
+    var status = row.add("statictext", undefined, "", { truncate: "end" });
+    status.alignment = ["fill", "center"]; status.preferredSize = [220, 18]; status.minimumSize = [40, 18];
+    var log = win.add("edittext", undefined, "", { multiline: true, readonly: true, scrolling: true });
+    log.alignment = ["fill", "fill"]; log.preferredSize = [480, 120]; log.minimumSize = [40, 0];
     function addLog(s) { var d = new Date(); var ts = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2); log.text = ts + "  " + s + "\n" + log.text; }
+    function idle() {
+        status.text = (B.paused ? "Paused" : "Listening…") + " (inbox: " + INBOX.fsName + ")" + (B.count ? "  ·  " + B.count + " run" : "");
+        status.helpTip = INBOX.fsName;
+    }
+    // a docked panel that was closed leaves its controls invalid; the task must not keep firing then
+    function alive() { try { status.text = status.text; return true; } catch (e) { return false; } }
     B.log = addLog;
+    B.win = win;
+
+    // switch to another bridge folder and remember it; returns "" or the reason it failed.
+    // The calling script's own result still goes to the folder it came from.
+    B.useFolder = function (path) {
+        path = slash(path);
+        if (inScripts(path)) return "pick a folder outside After Effects' Scripts folders";
+        if (!setRoot(path)) return "can't write to " + path;
+        app.settings.saveSetting(SECTION, KEY, ROOT);
+        B.ROOT = ROOT;
+        addLog("Folder: " + new Folder(ROOT).fsName);
+        idle();
+        return "";
+    };
 
     B.tick = function () {
+        if (!alive()) { try { app.cancelTask(B.taskId); } catch (e) {} return; }
         if (B.busy || B.paused) return;
         var files = INBOX.getFiles("*.jsx");
         if (!files || !files.length) return;
         files.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+        var outDir = OUTBOX, doneDir = DONE;
         B.busy = true;
         try {
             for (var i = 0; i < files.length; i++) {
@@ -106,8 +149,8 @@
                     app.endUndoGroup();
                 }
                 out.ms = new Date().getTime() - t0;
-                writeText(new File(OUTBOX.fsName + "/" + name + ".json"), stringify(out));
-                var dest = new File(DONE.fsName + "/" + f.name);
+                writeText(new File(outDir.fsName + "/" + name + ".json"), stringify(out));
+                var dest = new File(doneDir.fsName + "/" + f.name);
                 if (dest.exists) dest.remove();
                 f.copy(dest); f.remove();
                 B.count++;
@@ -117,15 +160,24 @@
             addLog("Bridge error: " + e2.toString());
         }
         B.busy = false;
-        status.text = (B.paused ? "Paused" : "Listening…") + "  ·  " + B.count + " run";
+        idle();
     };
-    pauseBtn.onClick = function () { B.paused = !B.paused; pauseBtn.text = B.paused ? "Resume" : "Pause"; status.text = B.paused ? "Paused" : "Listening…"; };
+    pauseBtn.onClick = function () { B.paused = !B.paused; pauseBtn.text = B.paused ? "Resume" : "Pause"; idle(); };
     runBtn.onClick = function () { B.tick(); };
+    folderBtn.onClick = function () {
+        if (B.busy) return;
+        var f = new Folder(ROOT).selectDlg("Claude Bridge folder (inbox, outbox and done go here)");
+        if (!f) return;
+        var err = B.useFolder(f.fsName);
+        if (err) alert("Claude Bridge: " + err);
+    };
 
     B.taskId = app.scheduleTask("if ($.global.ClaudeBridge) $.global.ClaudeBridge.tick();", 1000, true);
+    win.onResizing = win.onResize = function () { this.layout.resize(); };
     if (win instanceof Window) {
         win.onClose = function () { try { app.cancelTask(B.taskId); } catch (e) {} B.paused = true; };
         win.center(); win.show();
-    } else { win.layout.layout(true); }
-    addLog("Bridge started.");
+    } else { win.layout.layout(true); win.layout.resize(); }
+    idle();
+    addLog("Bridge started in " + new Folder(ROOT).fsName);
 })(this);

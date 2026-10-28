@@ -5,32 +5,53 @@ description: Driving Adobe After Effects from Claude without an MCP server, thro
 
 # After Effects via the file bridge (verified AE 2026 / 26.5, Windows)
 
-There is no AE MCP server. `scripts/ClaudeBridge.jsx` is a ScriptUI palette that, while open,
-checks `<ROOT>/inbox` every second, runs each `*.jsx` there inside `(function(){ ... })()` (so a
-top-level `return` works) as **one undo step named `Claude: <file>`**, writes
-`<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}` and moves the script to `done/`.
-`ROOT` is the folder `ClaudeBridge.jsx` was run from (`Documents/ClaudeBridge` if that folder is
-read-only); the panel's status line shows the inbox path.
-`$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`, `writeText`, `log` to scripts.
+There is no AE MCP server. `scripts/ClaudeBridge.jsx` is a ScriptUI panel (dockable when installed,
+a minimizable window when run as a plain script) that, while open, checks `<ROOT>/inbox` every second, runs
+each `*.jsx` there inside `(function(){ ... })()` (so a top-level `return` works) as **one undo
+step named `Claude: <file>`**, writes `<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}`
+and moves the script to `done/`.
+`ROOT` is the folder picked with the panel's **Folder…** button, remembered in AE's settings
+(`app.settings`, section `ClaudeBridge`, key `root`). Until one is picked: the script's own folder,
+or `Documents/ClaudeBridge` when the script sits in one of AE's Scripts folders (AE lists every
+script under them, so inbox/done must not live there) or its folder is read-only. The status line
+shows the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`, `writeText`,
+`log`, `useFolder`, `win` to scripts.
 
 ## Finding / starting it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
-  don't know ROOT, look for `ClaudeBridge.jsx` (Windows: `%APPDATA%\Microsoft\Windows\Recent\ClaudeBridge.jsx.lnk`
-  resolves to it); ROOT is its folder. Old `done/` + `outbox/` files show what earlier sessions did.
-- Start: File › Scripts › Run Script File… › `ClaudeBridge.jsx`. Needs Preferences › Scripting &
-  Expressions › *Allow Scripts to Write Files and Access Network*.
+  don't know ROOT, ask the user what the status line says. Old `done/` + `outbox/` files show
+  what earlier sessions did.
+- Install once: File › Scripts › Install ScriptUI Panel… › `ClaudeBridge.jsx` (it lands in
+  `%APPDATA%\Adobe\After Effects\<ver>\Scripts\ScriptUI Panels\`; copying it there by hand works
+  too, no admin needed), restart AE, Window › ClaudeBridge.jsx, dock it. A docked panel reopens
+  with the workspace. The folder is per AE version, so a new AE version needs it again *(unverified)*.
+  After changing the installed file, closing and reopening the panel from the Window menu loads
+  it (no restart).
+- No minimize button is possible for the panel: AE draws panel frames (floating or docked) with
+  only a close button, and `win.size = …` on a Panel is ignored. To tuck it away, dock it as a
+  tab. Palettes are Windows tool windows, so `minimizeButton: true` shows nothing there; a
+  `new Window("window", …, {minimizeButton: true})` is a normal window owned by AE with a
+  minimize button and its own taskbar button, and `show()` doesn't block.
+- Or once: File › Scripts › Run Script File… › `ClaudeBridge.jsx`. Either way needs Preferences ›
+  Scripting & Expressions › *Allow Scripts to Write Files and Access Network*.
 - You can't start it yourself: `AfterFX.exe -r <ClaudeBridge.jsx>` against an already running AE
   2026 did nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
 - A script that sits in `inbox/` for more than a few seconds means the panel is **paused or
-  closed** (AE itself still reports "Responding"). Ask the user to press Resume / Check now or
-  re-run the script; don't resend.
-- If the live panel listens in the wrong folder (e.g. started from a copy elsewhere; check with a
-  script returning `$.global.ClaudeBridge.ROOT`), move it from inside: send a script that runs
-  `$.evalFile(<wanted folder>/ClaudeBridge.jsx)`. The new panel cancels the old one's task, takes
-  ROOT from that file's folder and opens its own palette. To close the old palette, grab it
-  *before* the evalFile with `Window.find("palette", "Claude Bridge")` and close it from a delayed
-  `app.scheduleTask("…close()…", 2000, false)`, never directly: the old panel is still inside its
-  tick and writes to its own log after your script returns.
+  closed** (AE itself still reports "Responding"), or listening in another folder (the user may
+  have started a different copy: ask what the status line says). Don't resend.
+- Wrong folder: a script calling `$.global.ClaudeBridge.useFolder(path)` switches and remembers it.
+  It returns `""` or the reason (it refuses AE's Scripts folders and unwritable folders). The
+  calling script's own JSON still lands in the folder it came from.
+- Loading a changed `ClaudeBridge.jsx` into a running AE without the user: a script that runs
+  `var old = $.global.ClaudeBridge.win; $.evalFile(file)`. The new panel cancels the old task and
+  opens a window. Close `old` from a delayed `app.scheduleTask("…close()…", 2000, false)`, never
+  directly: the old panel is still inside its tick and writes to its own log after your script
+  returns *(closing via `win` unverified)*. Don't use `Window.find("palette", "Claude Bridge")`
+  for this: it returned an already-closed palette and left the visible one open. A palette started
+  this way once stopped on its own within ~5 min (cause unknown), so prefer asking the user to
+  close and reopen the panel (Window › ClaudeBridge.jsx loads the new file, no restart needed).
+- The bridge keeps running while AE is in the background (a ping answered in 0.6 s with the
+  Claude app in front).
 
 ## Sending scripts — never write straight into inbox/
 The bridge polls every second and can grab a file while it is still being written: it then runs
