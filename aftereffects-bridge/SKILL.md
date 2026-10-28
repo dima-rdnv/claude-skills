@@ -9,7 +9,13 @@ There is no AE MCP server. `scripts/ClaudeBridge.jsx` is a ScriptUI panel (docka
 a minimizable window when run as a plain script) that, while open, checks `<ROOT>/inbox` every second, runs
 each `*.jsx` there inside `(function(){ ... })()` (so a top-level `return` works) as **one undo
 step named `Claude: <file>`**, writes `<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}`
-and moves the script to `done/`.
+and moves the script to `done/` (without its signature line).
+**Signed scripts only:** `scripts/send.sh` signs each script with `~/.claude/ae-bridge.key` (created
+on first use; AE reads it from `Folder("~")/.claude`). Anything unsigned, changed after signing,
+older than an hour or already run is refused: `{"ok": false, "rejected": true, "error": "Rejected: …"}`,
+and the file goes to `rejected/`. This keeps other programs and synced folders from running code in
+AE; it does not limit what a signed script can do. Scripts that `$.evalFile` a library skip the
+check for that file, so keep such libraries out of synced folders.
 `ROOT` is the folder last set with `ClaudeBridge.useFolder(path)` (the panel has no folder button;
 you switch it when the user asks), remembered in AE's settings (`app.settings`, section
 `ClaudeBridge`, key `root`). Until then: the script's own folder, or `Documents/ClaudeBridge` when
@@ -40,7 +46,8 @@ status line showing the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringif
 - A script that sits in `inbox/` for more than a few seconds means the panel is **stopped**
   (status reads `Stopped…`: ask the user to press Start) or **closed** (AE itself still reports
   "Responding"), or listening in another folder (the user may have started a different copy: ask
-  what the status line says). Don't resend; it runs as soon as the bridge is back.
+  what the status line says). Don't resend; it runs as soon as the bridge is back. After an
+  hour its signature has expired and it is rejected; then send it again.
 - Wrong folder: a script calling `$.global.ClaudeBridge.useFolder(path)` switches and remembers it.
   It returns `""` or the reason (it refuses AE's Scripts folders and unwritable folders). The
   calling script's own JSON still lands in the folder it came from.
@@ -55,12 +62,12 @@ status line showing the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringif
 - The bridge keeps running while AE is in the background (a ping answered in 0.6 s with the
   Claude app in front).
 
-## Sending scripts — never write straight into inbox/
-The bridge polls every second and can grab a file while it is still being written: it then runs
-an **empty script**, reports `"ok": true, "result": null, "ms": 0`, and `done/<name>.jsx` is 0 bytes.
-Write the script elsewhere, copy it in under a non-`.jsx` name, then rename:
-`scripts/send.sh NAME [timeout]` does this (env `STAGE` = folder with `NAME.jsx`, `BRIDGE` = ROOT)
-and waits for the JSON. Number scripts (`057_render.jsx`) so `done/` reads as a history.
+## Sending scripts — only through send.sh
+`scripts/send.sh NAME [timeout]` (env `STAGE` = folder with `NAME.jsx`, `BRIDGE` = ROOT) signs the
+script, copies it in under a non-`.jsx` name, renames it and waits for the JSON. Never write into
+`inbox/` yourself: the panel would reject it as unsigned, and the bridge polls every second, so a
+file grabbed while still being written fails too. `send.sh` needs `openssl` (Git for Windows and
+macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 
 ## Rendering preview frames
 - `comp.saveFrameToPng(t, file)` is **asynchronous**: the script returns (ms ≈ 1) and the JSON
