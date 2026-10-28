@@ -11,8 +11,8 @@
     every script there) or its folder is read-only.
 
     Install:  File > Scripts > Install ScriptUI Panel...  > pick this file, restart AE, open
-              Window > ClaudeBridge.jsx and dock it - it then opens with every launch. Docked as a
-              tab behind another panel, or shrunk to a strip, it keeps running.
+              Window > ClaudeBridge.jsx and dock it - it then opens with every launch. It fits a
+              narrow column or a thin strip.
     Or once:  File > Scripts > Run Script File...  > pick this file.
     Needs:    Edit > Preferences > Scripting & Expressions >
               "Allow Scripts to Write Files and Access Network" (on).
