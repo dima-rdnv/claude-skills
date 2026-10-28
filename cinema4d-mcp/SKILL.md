@@ -40,6 +40,8 @@ socket plugin described below. Notes:
   only `td.GetMainTake().SetCamera(td, cam)` changed the render while the viewport camera stayed put.
   It runs on its own thread (~40 s for a Redshift preview at 960×540): call again to collect.
   After `stop_render` the next call can return "cancelled" once — just call it again.
+- `c4d.utils.RotAxisToMatrix(axis, a)` turns opposite to the right-hand rule (left-handed space):
+  to rotate direction a0 onto a1 with axis = a0 × a1, use −angle. Check `R.MulV(a0)` against a1.
 - The user may switch the active document while you work: for read-only steps find documents by name
   instead of using `doc`; for edits assert `doc.GetDocumentName()` first so a switch aborts cleanly.
 - Copy objects + their materials between open documents with links intact: `trans = c4d.AliasTrans();

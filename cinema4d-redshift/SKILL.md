@@ -72,6 +72,16 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   a `rsmathmul(t, t)` in the same spot worked.
 - Many RS point lights inside cloned rigs (66 here) made a 960×540 preview crawl (~15 % after 80 s);
   with them off it took 8 s.
+- **Hair-thin lines (~1 px)**: 1 px at distance z is z · aperture / (focal · width_px). Sweeps with a
+  0.018–0.02 cm square profile at 250–490 cm (100 mm, 36 mm gate, 1920 wide) rendered as crisp
+  ~1 px lines; emission-only weight 6–8 keeps them bright after anti-aliasing (preview quality).
+- Texture-driven line opacity (`texturesampler` → `rsscalarramp`): lowering the ramp's `old_max`
+  (1 → 0.35–0.45) keeps only the dark line cores of a black-on-white grid texture → thinner lines.
+- Check texture paths before judging a material: a missing `relative:///tex/...` texture made an
+  opacity-masked grid render as a solid sphere. `c4d.GenerateTexturePath(doc_path, file, "")`
+  returns None when unresolved.
+- (unverified fix) RS Object tag 1999 = 1 + 2002 "Casts Shadows" = 0 did not stop a small emissive
+  sphere's shadow in a preview; shrinking the object did.
 
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom
