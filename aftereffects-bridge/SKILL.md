@@ -19,9 +19,18 @@ read-only); the panel's status line shows the inbox path.
   resolves to it); ROOT is its folder. Old `done/` + `outbox/` files show what earlier sessions did.
 - Start: File › Scripts › Run Script File… › `ClaudeBridge.jsx`. Needs Preferences › Scripting &
   Expressions › *Allow Scripts to Write Files and Access Network*.
+- You can't start it yourself: `AfterFX.exe -r <ClaudeBridge.jsx>` against an already running AE
+  2026 did nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
 - A script that sits in `inbox/` for more than a few seconds means the panel is **paused or
   closed** (AE itself still reports "Responding"). Ask the user to press Resume / Check now or
   re-run the script; don't resend.
+- If the live panel listens in the wrong folder (e.g. started from a copy elsewhere; check with a
+  script returning `$.global.ClaudeBridge.ROOT`), move it from inside: send a script that runs
+  `$.evalFile(<wanted folder>/ClaudeBridge.jsx)`. The new panel cancels the old one's task, takes
+  ROOT from that file's folder and opens its own palette. To close the old palette, grab it
+  *before* the evalFile with `Window.find("palette", "Claude Bridge")` and close it from a delayed
+  `app.scheduleTask("…close()…", 2000, false)`, never directly: the old panel is still inside its
+  tick and writes to its own log after your script returns.
 
 ## Sending scripts — never write straight into inbox/
 The bridge polls every second and can grab a file while it is still being written: it then runs
