@@ -1,9 +1,10 @@
 /*  Claude Bridge for After Effects
     --------------------------------
     Lets Claude (Cowork) drive After Effects without an MCP server.
-    While this panel is open it checks  D:\WORK\Claude\ae-bridge\inbox  every second,
+    While this panel is open it checks  inbox\  next to this file every second,
     runs any .jsx file it finds there (one undo step each, named "Claude: <file>"),
     writes the result to  outbox\<file>.json  and moves the script to  done\.
+    If this file's folder is read-only, it uses  Documents\ClaudeBridge  instead.
 
     Start:  File > Scripts > Run Script File...  > pick this file.
     Needs:  Edit > Preferences > Scripting & Expressions >
@@ -11,7 +12,13 @@
     Stop:   close the panel (or press Pause).
 */
 (function (thisObj) {
-    var ROOT = "D:/WORK/Claude/ae-bridge";
+    function slash(p) { return String(p).replace(/\\/g, "/"); }
+    var ROOT = "";
+    try { ROOT = slash(new File($.fileName).parent.fsName); } catch (e) {}
+    if (!ROOT || !(new Folder(ROOT + "/inbox").exists || new Folder(ROOT + "/inbox").create())) {
+        ROOT = slash(Folder.myDocuments.fsName) + "/ClaudeBridge";
+        new Folder(ROOT).create();
+    }
     var INBOX = new Folder(ROOT + "/inbox");
     var OUTBOX = new Folder(ROOT + "/outbox");
     var DONE = new Folder(ROOT + "/done");

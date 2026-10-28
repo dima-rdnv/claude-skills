@@ -2,8 +2,9 @@
 # send.sh NAME [TIMEOUT_S]
 # Stages $STAGE/NAME.jsx into the bridge inbox atomically and waits for outbox/NAME.json.
 #   STAGE  folder where scripts are written (default: current dir)
-#   BRIDGE bridge root (default: /d/WORK/Claude/ae-bridge)
-STAGE="${STAGE:-.}"; BRIDGE="${BRIDGE:-/d/WORK/Claude/ae-bridge}"; n="$1"
+#   BRIDGE bridge root = the folder with inbox/ outbox/ done/ (required)
+STAGE="${STAGE:-.}"; n="$1"
+if [ ! -d "$BRIDGE/inbox" ]; then echo "Set BRIDGE to the bridge folder (the one holding inbox/ - shown in the panel's status line)"; exit 1; fi
 rm -f "$BRIDGE/outbox/$n.json"
 # write under a non-.jsx name first, then rename: the bridge globs *.jsx every second and
 # would otherwise run a half-written (often empty) file

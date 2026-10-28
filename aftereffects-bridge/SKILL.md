@@ -9,13 +9,14 @@ There is no AE MCP server. `scripts/ClaudeBridge.jsx` is a ScriptUI palette that
 checks `<ROOT>/inbox` every second, runs each `*.jsx` there inside `(function(){ ... })()` (so a
 top-level `return` works) as **one undo step named `Claude: <file>`**, writes
 `<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}` and moves the script to `done/`.
-Default `ROOT` is `D:/WORK/Claude/ae-bridge` (edit the `ROOT` line to move it).
+`ROOT` is the folder `ClaudeBridge.jsx` was run from (`Documents/ClaudeBridge` if that folder is
+read-only); the panel's status line shows the inbox path.
 `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`, `writeText`, `log` to scripts.
 
 ## Finding / starting it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
   don't know ROOT, look for `ClaudeBridge.jsx` (Windows: `%APPDATA%\Microsoft\Windows\Recent\ClaudeBridge.jsx.lnk`
-  resolves to it) and read its `ROOT`. Old `done/` + `outbox/` files show what earlier sessions did.
+  resolves to it); ROOT is its folder. Old `done/` + `outbox/` files show what earlier sessions did.
 - Start: File › Scripts › Run Script File… › `ClaudeBridge.jsx`. Needs Preferences › Scripting &
   Expressions › *Allow Scripts to Write Files and Access Network*.
 - A script that sits in `inbox/` for more than a few seconds means the panel is **paused or
