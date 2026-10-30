@@ -69,6 +69,16 @@ script, copies it in under a non-`.jsx` name, renames it and waits for the JSON.
 file grabbed while still being written fails too. `send.sh` needs `openssl` (Git for Windows and
 macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 
+## Traps hit in practice
+- **No backslashes in bridge scripts**: a script with `/\/g` failed with "SyntaxError: Unterminated
+  string constant" at that line (the bridge's handling mangles them). Match paths with
+  `File.fullName` (forward slashes, e.g. `/d/WORK/...`) instead of `fsName`.
+- Multilayer (single-part) EXR sequences from Unreal: `canImportAs(COMP_CROPPED_LAYERS)` says true, but
+  the import came back as one footage item — the extra layers stay inside (EXtractoR), so ship mattes as
+  their own image sequence.
+- After the user restarts AE, check which project is open (`app.project.file`) before running anything
+  that looks for comps by name; the unsaved state of the previous session is gone.
+
 ## Rendering preview frames
 - `comp.saveFrameToPng(t, file)` is **asynchronous**: the script returns (ms ≈ 1) and the JSON
   arrives before the PNGs are on disk. Poll until all expected files exist (and a beat more for
