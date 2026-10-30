@@ -1,0 +1,88 @@
+---
+name: unreal-sequencer-python
+description: Building Unreal Engine 5.8 Level Sequences from Python — cine camera with keyed transform, camera cut track, animating a Material Parameter Collection value, a LevelSequenceActor that auto-plays on Play, re-running the build safely, and checking the result in Play-In-Editor through the Unreal MCP. Load with unreal-mcp.
+---
+
+# Level Sequences from Python
+
+Verified Oct 2026, UE 5.8.4, run through `ue_exec.py` (see `unreal-mcp`). Checked in PIE: the
+camera cut took over the view and the MPC value drove the material.
+
+## Create or reuse the sequence
+```python
+AT, EAL = unreal.AssetToolsHelpers.get_asset_tools(), unreal.EditorAssetLibrary
+seq = EAL.load_asset(path) if EAL.does_asset_exist(path) else \
+      AT.create_asset(name, folder, unreal.LevelSequence, unreal.LevelSequenceFactoryNew())
+for b in list(seq.get_bindings()): b.remove()
+for t in list(seq.get_tracks()): seq.remove_track(t)
+seq.set_display_rate(unreal.FrameRate(24, 1))
+seq.set_playback_start(0); seq.set_playback_end(720)      # display-rate frames
+```
+**Don't delete and recreate a sequence (or material) that is loaded/used:** `delete_asset` fails
+with "Failed to unload all packages during ForceDeleteObjects" (an Ensure in the log) and the
+following `create_asset` returns None. Reuse and clear it instead.
+
+## Camera with keyed transform
+```python
+cam = eas.spawn_actor_from_class(unreal.CineCameraActor, start)
+cc = cam.get_cine_camera_component()
+cc.set_editor_property("current_focal_length", 24.0)
+fs = cc.get_editor_property("focus_settings")
+fs.set_editor_property("focus_method", unreal.CameraFocusMethod.DISABLE)   # no depth of field
+cc.set_editor_property("focus_settings", fs)
+
+binding = seq.add_possessable(cam)
+sec = binding.add_track(unreal.MovieScene3DTransformTrack).add_section()
+sec.set_range(0, 720)
+ch = {c.get_name().rsplit("_", 1)[0]: c for c in sec.get_all_channels()}
+ch["Location.Y"].add_key(unreal.FrameNumber(0), -34000.0, 0.0,
+                         unreal.MovieSceneTimeUnit.DISPLAY_RATE, unreal.MovieSceneKeyInterpolation.LINEAR)
+```
+- Channel names carry a numeric suffix (`Location.X_1`, `Rotation.Z_3` ...) — strip it.
+  Rotation.X = roll, .Y = pitch, .Z = yaw.
+- `unreal.Rotator(roll=, pitch=, yaw=)` — use keywords; the positional order is roll, pitch, yaw.
+
+## Camera cut
+```python
+cut = seq.add_track(unreal.MovieSceneCameraCutTrack).add_section()
+cut.set_range(0, 720)
+cut.set_camera_binding_id(seq.get_portable_binding_id(seq, binding))
+```
+
+## Animating a Material Parameter Collection value
+```python
+t = seq.add_track(unreal.MovieSceneMaterialParameterCollectionTrack)
+t.set_editor_property("mpc", unreal.load_asset("/Game/.../MPC_X"))
+s = t.add_section(); s.set_range(0, 720)
+s.add_scalar_parameter_key("Time", unreal.FrameNumber(0), 0.0)   # creates the channel ("Time_1")
+c = [c for c in s.get_all_channels() if "Time" in c.get_name()][0]
+for k in list(c.get_keys()): c.remove_key(k)                      # then key it like any channel
+```
+
+## Play it on Play
+```python
+lsa = eas.spawn_actor_from_class(unreal.LevelSequenceActor, loc)
+lsa.set_sequence(seq)
+ps = lsa.get_editor_property("playback_settings")
+ps.set_editor_property("auto_play", True)
+lsa.set_editor_property("playback_settings", ps)
+```
+The camera cut track takes over the player's view during playback.
+
+## Reading it back
+`seq.get_bindings()` → `b.get_tracks()` → `t.get_sections()` → `s.get_all_channels()` →
+`c.get_keys()` → `k.get_time().frame_number.value`, `k.get_value()`.
+`MovieSceneObjectBindingID` prints as an empty struct from Python — verify the cut in PIE.
+
+## Checking in Play-In-Editor through the Unreal MCP
+`EditorAppToolset.StartPIE` with `{"options": {"bSimulate": false, "playMode":
+"PlayMode_InViewPort", "warmupSeconds": 6}}` (returns after warm-up), then
+`EditorAppToolset.CaptureEditorImage` (whole editor window, ~350 KB → decode with
+`unreal-mcp/scripts/decode_capture.py`), later captures after a background `sleep`, then
+`StopPIE`. CaptureViewport needs a capture pose and would not show the sequence camera.
+
+## Related traps
+- `/Engine/BasicShapes/Plane` has **no collision** — a pawn falls through a floor made of it; use
+  a thin scaled Cube.
+- The Film/Video template's `DefaultInput.ini` has `bAlwaysShowTouchInterface=True` (on-screen
+  joysticks in Play); the setting is read at editor start.

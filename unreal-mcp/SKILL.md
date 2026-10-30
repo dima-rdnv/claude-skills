@@ -12,6 +12,8 @@ Prefer these notes over memory. Anything not tested is marked *(unverified)*.
 - `unreal-materials-python` — building materials, material functions and parameter collections from
   Python (MaterialEditingLibrary), Custom HLSL nodes, injecting a function into existing materials,
   reading compile errors, a flat unshaded colour look.
+- `unreal-sequencer-python` — Level Sequences from Python: camera transform, camera cut, animating a
+  parameter collection, auto-play on Play, checking it in PIE.
 - `unreal-ultra-dynamic-sky` — adding Ultra Dynamic Sky, setting its Blueprint variables via
   ObjectTools, locking exposure for renders.
 - `project-notes` — per-production notes; read them at the start of any task on a named production.
@@ -106,6 +108,9 @@ viewport gives e.g. 1400x444).
 - Editor-world parameter-collection values (what the viewport shows):
   `unreal.MaterialLibrary.set_scalar_parameter_value(editor_world, mpc, "Name", v)`.
 - Console commands: `unreal.SystemLibrary.execute_console_command(editor_world, "r.Foo 1")`.
+- **Stop Play-In-Editor before editing assets**: while PIE runs, `EditorAssetLibrary.load_asset`
+  returns None (asset scripting is blocked during play) → confusing `'NoneType'` errors.
+  `EditorAppToolset.StopPIE` / `IsPIERunning` via MCP.
 
 ## Crash traps (each one killed the editor)
 - **Never `EditorAssetLibrary.duplicate_asset()` a map and then `load_level()` it in the same

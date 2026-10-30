@@ -55,6 +55,12 @@ unreal.EditorAssetLibrary.save_loaded_asset(asset)
 - `MaterialExpressionCollectionParameter`: setting `collection` then `parameter_name` via
   `set_editor_property` resolves the parameter id (compiles, values verified in the viewport).
 - `MaterialExpressionTextureObject`: setting `texture` auto-picks the sampler type.
+- **Changing MPC defaults resets the editor world's live MPC values on the next tick.** Setting a
+  preview value (`MaterialLibrary.set_scalar_parameter_value(editor_world, ...)`) in the same Python
+  call as a default change gets wiped — set previews in a separate call.
+- Deleting a material that is loaded and assigned fails ("Failed to unload all packages" ensure)
+  and `create_asset` then returns None — clear its nodes instead (loop
+  `MEL.delete_all_material_expressions(mat)` until `get_num_material_expressions == 0`) and rebuild.
 
 ## Compile errors
 `MEL` has no compile-error getter. Read the log: after a recompile, lines like
@@ -80,9 +86,25 @@ c.set_editor_property("inputs", custom_inputs(["Tex", "P", "Pivot", "Now"]))
 - World position: `MaterialExpressionWorldPosition` (absolute) into a float3 input.
 - Per-object / per-instance pivot: `MaterialExpressionTransformPosition` with
   `transform_source_type = TRANSFORMPOSSOURCE_INSTANCE`, `transform_type = TRANSFORMPOSSOURCE_WORLD`,
-  input = Constant3Vector(0). Compiles and drives whole-object effects on StaticMeshActors;
-  that instanced (ISM) instances each get their own pivot is *(unverified visually)*.
-  (`ObjectPositionWS` exposes no Python properties.)
+  input = Constant3Vector(0). Verified visually: StaticMeshActors AND each instance of an
+  InstancedStaticMeshComponent switch on their own. (`ObjectPositionWS` exposes no Python properties.)
+- Per-instance object SIZE: `MaterialExpressionBounds` (default type "Instance Local" = the
+  instance's mesh bounds; output 0 = half extent, local units) → `MaterialExpressionTransform` with
+  `transform_source_type = MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE`,
+  `transform_type = MaterialVectorCoordTransform.TRANSFORM_WORLD` → world half extent incl. scale.
+  `length(.xy)` separates small instances from a huge floor (verified). Don't use ObjectRadius /
+  ObjectBounds for this: they are primitive-level, i.e. the whole ISM component.
+- Whole-object / chunked switching without noise: time = field(pivot) + hash(pivot) jitter; for
+  big objects use cubes `ci = floor(P / size + 0.37)` (the offset keeps the grid off z = 0 floors —
+  an exact boundary there flickers between two cells) and time = field(cell centre) + hash(ci).
+
+## Keeping emissive out of Lumen GI (no colour spill onto neighbours)
+`MaterialExpressionRayTracingQualitySwitch` (pins `Normal`, `RayTraced`): the RayTraced branch is
+used by ray-tracing shaders AND by Lumen's surface-cache card capture (`LUMEN_CARD_CAPTURE` in
+Common.ush `GetRayTracingQualitySwitch`). Feed the full emissive to Normal and a reduced/zero
+emissive to RayTraced → the surface looks the same on screen but adds no bounce light (verified in
+PIE: a pink cast on the neighbouring wall disappeared). Side effect: it looks dark in ray-traced
+reflections; screen-space reflections still show it.
 
 ## Material function with pass-through inputs
 FunctionInput: `input_name`, `input_type` (`unreal.FunctionInputType.FUNCTION_INPUT_VECTOR3`,
