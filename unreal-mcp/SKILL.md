@@ -18,6 +18,8 @@ Prefer these notes over memory. Anything not tested is marked *(unverified)*.
   ObjectTools, locking exposure for renders.
 - `unreal-content-management` — moving assets and maps, redirectors, World Partition / one-file-per-actor
   levels, what imported samples do to project config, backups, folder colours, tidying the Outliner.
+- `unreal-led-volume-rig` — multi-screen LED box / CAVE rigs: off-axis cameras from a C4D rig, one
+  video per screen through Movie Render Queue.
 - `unreal-editor-tools` — one-click tools for the user: a custom main-menu entry (ToolMenus) registered
   at every start, undoable actions, piloting / viewport camera, Game View.
 - `project-notes` — per-production notes; read them at the start of any task on a named production.

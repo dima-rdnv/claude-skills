@@ -166,6 +166,28 @@ After tonemapping the input is display-encoded: a target sRGB value / 255 lands 
 empty horizon. Put it on a PostProcessVolume: `settings.weighted_blendables.array` += a
 `WeightedBlendable` (weight 1, object = material), then set the settings struct back.
 
+## Changing a function that 25 materials call (in place)
+Rebuilding a material function gives its outputs new ids and disconnects every caller (black
+surfaces). To change a Custom node inside it: find it (`MEL.get_material_function_expressions(mf)`, match
+the description), `set_editor_property("code", ...)`, get `inputs`, append new `CustomInput`s, set the
+array back — the existing input links survived (all 15 still wired, checked with
+`MEL.get_inputs_for_material_function_expression(mf, node)`), link new sources, `update_material_function`.
+Used to add exact-time overrides to a red-takeover mask: MPC vectors (x, y, radius, time); objects whose
+pivot lies within the radius switch exactly then, ignoring the field (a hero tree, a rock).
+
+## Title / overlay in a post-process material (after tonemapping)
+- In `BL_SCENE_COLOR_AFTER_TONEMAPPING` you work in display values: blends match a compositor
+  (Screen: `1 - (1-bg)(1-a)`; Add) and colours come out exact (no fog, exposure, tonemapper).
+- A card floating in the world without rendering geometry: `WorldPosition` (reconstructed from depth)
+  and `CameraPositionWS` → per-pixel ray; intersect the card plane (centre / right / up from MPC vectors),
+  uv inside → sample; compare the hit distance with the scene distance for occlusion. Works for every
+  camera (five LED screens) and is filtered by the texture's mips (no AA needed after TSR).
+- An animation as frames without the media framework: pack them into one tiled texture (e.g. 300 frames
+  of 2048x128 in 8 x 38 tiles = 16384 x 4864, G8) and pick the tile from MPC Time: frame-exact in Movie
+  Render Queue. Keep the content off the tile borders so mips can't bleed. (Texture2DArray can't be built
+  from Python in 5.8: the factory's InitialTextures and the array's source textures aren't exposed.)
+- ProRes 4444 from After Effects was premultiplied (rgb ≈ alpha for white): use rgb as the Screen/Add amount.
+
 ## Data textures (e.g. a float field)
 - Write a 16-bit grayscale PNG with numpy + zlib (no PIL needed), import with `AssetImportTask`
   (`replace_existing=True, automated=True`), then set `srgb=False`,

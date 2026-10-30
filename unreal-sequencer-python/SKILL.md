@@ -1,6 +1,6 @@
 ---
 name: unreal-sequencer-python
-description: Building Unreal Engine 5.8 Level Sequences from Python — cine camera with keyed transform, a camera on a movable Camera Rig Rail (key only the rail position), camera cut track, animating a Material Parameter Collection value, a LevelSequenceActor that auto-plays on Play, re-running the build safely, and checking the result in Play-In-Editor through the Unreal MCP. Load with unreal-mcp.
+description: Building Unreal Engine 5.8 Level Sequences from Python and rendering them with Movie Render Queue — cine camera with keyed transform, a camera on a movable Camera Rig Rail (key only the rail position), animating Blueprint variables and post-process settings (time of day, locked exposure), MRQ jobs/presets/executors and their traps, camera cut track, animating a Material Parameter Collection value, a LevelSequenceActor that auto-plays on Play, re-running the build safely, and checking the result in Play-In-Editor through the Unreal MCP. Load with unreal-mcp.
 ---
 
 # Level Sequences from Python
@@ -136,6 +136,49 @@ a direct preview got reset to frame-0 values before the capture).
 `seq.get_bindings()` → `b.get_tracks()` → `t.get_sections()` → `s.get_all_channels()` →
 `c.get_keys()` → `k.get_time().frame_number.value`, `k.get_value()`.
 `MovieSceneObjectBindingID` prints as an empty struct from Python — verify the cut in PIE.
+
+## Animating other actors' properties
+- Blueprint variables with spaces (Ultra Dynamic Sky "Time of Day"): binding `add_possessable(actor)`,
+  `MovieSceneFloatTrack`, `set_property_name_and_path("Time of Day", "Time of Day")` — worked (read back
+  with `actor.get_editor_property("Time of Day")` after scrubbing). Python attribute access uses the same
+  spaced name.
+- Struct members: PostProcessVolume exposure lock animated with paths
+  `"Settings.AutoExposureMinBrightness"` / `"...MaxBrightness"` (overrides already on). With a locked
+  histogram range, set `auto_exposure_speed_up/down` high (100): renders start from a default exposure
+  and the 32 warm-up frames were not enough to adapt (the red came out at 58 % brightness).
+- Night → day with a flat emissive colour: scale the emissive by 2^(EV − EV_day) as the locked EV changes
+  so it reads the same on screen.
+
+## Movie Render Queue from Python (5.8)
+```python
+sub = unreal.get_editor_subsystem(unreal.MoviePipelineQueueSubsystem); q = sub.get_queue()
+job = q.allocate_new_job(unreal.MoviePipelineExecutorJob)
+job.set_editor_property("sequence", unreal.SoftObjectPath(seq.get_path_name()))
+job.set_editor_property("map", unreal.SoftObjectPath("/Game/.../L_Map.L_Map"))
+cfg = job.get_configuration()            # or job.set_configuration(preset_asset)
+o = cfg.find_or_add_setting_by_class(unreal.MoviePipelineOutputSetting)
+o.set_editor_property("output_resolution", unreal.IntPoint(w, h))   # + output_directory (DirectoryPath),
+# file_name_format "{sequence_name}.{frame_number}", use_custom_playback_range / custom_start/end_frame
+cfg.find_or_add_setting_by_class(unreal.MoviePipelineDeferredPassBase)
+cfg.find_or_add_setting_by_class(unreal.MoviePipelineImageSequenceOutput_PNG)
+aa = cfg.find_or_add_setting_by_class(unreal.MoviePipelineAntiAliasingSetting)   # samples, warm-up counts
+sub.render_queue_with_executor(unreal.MoviePipelineNewProcessExecutor)           # or ...PIEExecutor
+```
+- Presets: `AssetTools.create_asset(name, path, unreal.MoviePipelinePrimaryConfig,
+  unreal.MoviePipelinePrimaryConfigFactory())`, fill with the same calls, `save_loaded_asset`.
+- **PIE executor** starts Play-in-Editor: any loaded Blueprint with compile errors pops the modal
+  "Blueprint Asset Compilation Error … Play in Editor / Cancel" (it checks every loaded UBlueprint with
+  `BS_Error`; Electric Dreams' ambience BP needs the Soundscape plugin). Removing the actors doesn't
+  unload the class (the undo buffer holds them) — enable the plugin (restart) or use the new-process executor.
+- **New-process executor** renders in `UnrealEditor-Cmd` from DISK (save everything first — unsaved
+  materials render stale) and keeps the editor free, but it locks the packages it loaded: editor saves
+  of those fail ("MoveFile was unable to move … Error saving") until it ends. Cancel:
+  `sub.get_active_executor().cancel_all_jobs()`. First job ~5 min (level load + shaders), later ones faster.
+- Camera cuts: a cut inside a subsequence won over the parent shot's cut in MRQ — keep cuts only at the
+  level that is rendered.
+- Media (a title movie) in renders: a video file isn't frame-accurate in MRQ; use an image sequence. For
+  an overlay we baked the frames into one tiled texture and picked the frame from the sequence time in
+  a post-process material (exact, no media player) — see unreal-materials-python.
 
 ## Checking in Play-In-Editor through the Unreal MCP
 `EditorAppToolset.StartPIE` with `{"options": {"bSimulate": false, "playMode":
