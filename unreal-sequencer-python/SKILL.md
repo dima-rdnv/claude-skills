@@ -197,6 +197,15 @@ sub.render_queue_with_executor(unreal.MoviePipelineNewProcessExecutor)          
   [`MoviePipelinePostProcessPass` with `enabled`, `material`, `name`, `high_precision_output`]; the
   material is Post Process / After Tonemapping. In a multilayer EXR it arrived as `FinalImage<Name>.R/G/B/A`
   (float). Not needed: `disable_multisample_effects` (that would drop DoF / motion blur for the beauty).
+- **Depth pass:** same mechanism, a PP material with SceneTexture SceneDepth (cm, in `.r` of its float4
+  `Color` output — a Custom node input `D` is float4, so use `D.r`) -> e.g. metres in R, 0 in G/B (keeps
+  the 32-bit layer small). The PP target is half float per sample (max 65504): cap the sky below that or
+  it accumulates to inf. 32-bit layers stay lossless in a DWAB file (DWA's lossy step is for half R/G/B).
+  A failed PP material silently falls back to the default and the layer carries the scene colour:
+  check `Failed to compile Material` in the editor log and look at the layer's values.
+- Speed: spatial x temporal samples cost about the product; a frame of 96 (6 x 16) cinematic samples at
+  2884x1800 took 9.5 s on an RTX 4090 while a quick 32-sample test suggested ~5 s — measure the real job's
+  first ~20 frames and re-plan before trusting an overnight estimate.
 - Speed (UE 5.8, RTX 4090, Lumen + Nanite + UDS clouds, 2884x1800): 8 temporal samples 0.63 s / frame
   (ZIP EXR), ~1.0 s with DWAB + a 32-bit matte pass + OCIO; 1 sample + TSR 0.2 s / frame (720 frames in
   3 min 45 s including start-up) — the "fast" preset. ffmpeg 7.1 can't decode DWAB EXRs (black frames). Start-up ~1-3 min; the first run

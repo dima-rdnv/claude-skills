@@ -27,7 +27,14 @@ Unreal MCP ObjectTools with the display name, lower-case first letter:
 - `ObjectTools.list_properties` → JSON schema of every variable (~1000 keys, 330 KB; parse from the
   saved tool-result file). Keys look like `"time of Day"`, `"cloud Coverage"`, `"exposure Bias Day"`.
 - `ObjectTools.get_properties(instance, ["time of Day", "fog"])`
-- `ObjectTools.set_properties(instance, values='{"time of Day": 1030}')` — `values` is a JSON
+- `ObjectTools.set_properties(instance, values='{"time of Day": 1030}')` does NOT mark the actor's
+  package dirty: `save_dirty_packages` skips it and a separate render process (MRQ new-process executor)
+  reads the old values from disk. Call `actor.modify()` in Python before saving.
+- UDS variables animate in Sequencer by variable name (float track, property name and path `"Fog"`,
+  `"Time of Day"`). `fog` is 0-10 (1 = light); raising it also blends the height fog falloff from
+  `base Height Fog Falloff` (0.065) toward `foggy Height Fog Falloff` (0.015 = fog reaching high); a
+  higher foggy falloff (e.g. 0.5) keeps the extra fog low.
+- `ObjectTools.set_properties` — `values` is a JSON
   *string*. Enums are passed by name (`"AEM_Histogram"`); FloatRange as
   `{"lowerBound": {"type": "Inclusive", "value": -1}, "upperBound": {"type": "Inclusive", "value": -1}}`.
   The change applies in the editor right away (construction script reruns).
