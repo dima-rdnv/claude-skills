@@ -53,3 +53,8 @@ A 750 MB scene loaded in ~40 s.
 - Checking: render one frame per screen (custom playback range, quarter scale) and paste them into the
   unfolded layout. `AutomationLibrary.take_high_res_screenshot(camera=...)` ignored the camera while
   the viewport piloted another one and forced the viewport aspect — not usable for this.
+- Quick look through one off-axis camera without rendering: `CaptureViewport` (90° horizontal FOV, viewport
+  aspect) from the camera's location, pitched to the frame's centre angle (atan(sensor_v_offset /
+  focal)), then crop columns ±(sensor_w/2)/focal and rows to tan range [(-h/2 + v_off)/focal,
+  (h/2 + v_off)/focal] (px = W/2 per tan unit, rows through the pitch). Matched an MRQ frame of the same
+  shot within ~8 %. No DoF, and editor-preview lighting.

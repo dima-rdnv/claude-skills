@@ -91,7 +91,13 @@ viewport gives e.g. 1400x444).
 - Editor sprites / volume outlines / selected splines appear in captures: switch on Game View
   (`LevelEditorSubsystem.editor_set_game_view(True)`, = G) for render-like images.
 - A capture pose far from the previous frame shows motion blur (temporal); capture again at the same
-  pose for a sharp image.
+  pose for a sharp image. If it stays smeared, the viewport itself keeps moving (piloting an actor, or
+  the user scrubbing Sequencer): eject the pilot, park the viewport at the pose
+  (`UnrealEditorSubsystem.set_level_viewport_camera_info(loc, rot)`), and for that capture only set
+  `r.MotionBlurQuality 0` (read the old value with `SystemLibrary.get_console_variable_int_value`, restore it).
+- An open Level Sequence drives its actors at the playhead: setting a rail/actor property from Python
+  only lasts until Sequencer re-evaluates. Read positions after `LevelSequenceEditorBlueprintLibrary
+  .set_current_time(frame)` in a later call, and put the user's playhead back when done.
 
 ## Python remote execution
 - Enable: Project Settings → Plugins → Python → *Enable Remote Execution?* or in `DefaultEngine.ini`:
