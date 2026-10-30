@@ -67,7 +67,9 @@ ps = lsa.get_editor_property("playback_settings")
 ps.set_editor_property("auto_play", True)
 lsa.set_editor_property("playback_settings", ps)
 ```
-The camera cut track takes over the player's view during playback.
+The camera cut track takes over the player's view during playback. To keep free control of the
+player camera while the sequence still animates everything else (e.g. a material parameter), set
+`ps.set_editor_property("disable_camera_cuts", True)` on the same playback settings (verified).
 
 ## Reading it back
 `seq.get_bindings()` → `b.get_tracks()` → `t.get_sections()` → `s.get_all_channels()` →
@@ -85,4 +87,11 @@ The camera cut track takes over the player's view during playback.
 - `/Engine/BasicShapes/Plane` has **no collision** — a pawn falls through a floor made of it; use
   a thin scaled Cube.
 - The Film/Video template's `DefaultInput.ini` has `bAlwaysShowTouchInterface=True` (on-screen
-  joysticks in Play); the setting is read at editor start.
+  joysticks in Play). The joystick check (`SVirtualJoystick::ShouldDisplayTouchInterface`) reads
+  the in-memory config, not the settings object, so editing the ini or the CDO alone needs an editor
+  restart. Without restarting: set it on the CDO and call `save_key_mappings()` (= SaveConfig):
+  ```python
+  s = unreal.InputSettings.get_default_object()
+  s.set_editor_property("always_show_touch_interface", False); s.save_key_mappings()
+  ```
+  (verified: joysticks gone in the next PIE). Also set it in `Config/DefaultInput.ini` to persist.
