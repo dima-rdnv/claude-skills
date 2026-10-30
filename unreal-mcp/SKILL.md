@@ -121,13 +121,25 @@ viewport gives e.g. 1400x444).
 - **Moving / renaming a map from a script:** `EditorAssetLibrary.rename_asset` and
   `AssetTools.rename_assets` get cancelled when the editor's per-user config mentions the map
   (MRU list, saved viewport positions): a "config INI ... may need Find/Replace ... Continue?" prompt
-  auto-answers Cancel in unattended scripts. Use Save As instead: `load_level(old)` →
-  `EditorLoadingAndSavingUtils.save_map(editor_world, new)` → fix up redirectors → delete the old
-  map (only delete it, never `load_level` it again). Ordinary assets move fine with `rename_asset`
-  (redirectors are left where something still points; `AssetTools.fixup_referencers` cleans them).
-- Adding a sample project's content to a project (e.g. Electric Dreams via the launcher) also merges
-  its config: startup map, `GlobalDefaultGameMode`, game instance, audio settings — Play in your own
-  levels changes until you set a per-level game mode override.
+  auto-answers Cancel in unattended scripts. Instead: `load_level(old)` →
+  `EditorLoadingAndSavingUtils.save_map(editor_world, new)` — this writes a COPY at `new` and the
+  editor keeps `old` open, with the copy now in memory as an asset → restart the editor, then
+  `load_level(new)`, save it (references through redirectors get rewritten), delete the old map.
+  (`find_asset_data(path).is_asset_loaded()` tells you whether a map is in memory without loading it.)
+- Moving ordinary assets: `EditorAssetLibrary.rename_asset` works, but **move a set together or
+  dependencies first**: an asset moved before what it references saves the old paths, and if no
+  redirector is left for those (it only appears where an on-disk referencer still points), the
+  reference is lost ("LoadErrors: ... dependent package ... was not available"). Rebuild such assets.
+  `AssetTools.fixup_referencers` is NOT exposed to Python in 5.8 — load and resave the referencers,
+  then delete the `ObjectRedirector` assets.
+- Sequencer possessable bindings did not survive moving the level (camera stopped moving) — rebuild
+  the bindings after a level move.
+- Adding a sample project's content to a project (e.g. Electric Dreams via the launcher) brings its
+  config: here it REPLACED `DefaultEngine.ini` (our remote-execution section vanished → re-enable it
+  live with ObjectTools `set_properties` on `/Script/PythonScriptPlugin.Default__PythonScriptPluginSettings`
+  `{"bRemoteExecution": true}` and re-add it to the ini) and set its startup map,
+  `GlobalDefaultGameMode`, game instance and audio settings. Fix: `GameMapsSettings` CDO
+  `editor_startup_map` + the ini line, and a per-level game mode override.
 - After a crash a *CrashReportClientEditor* window stays open; the editor can be relaunched with
   `UnrealEditor.exe "<path>.uproject"` (launching without the Epic launcher skips its login —
   fine for editing; Fab needs the launcher).
