@@ -11,7 +11,9 @@ Prefer these notes over memory. Anything not tested is marked *(unverified)*.
 ## Sub-skills — load the one that matches the task
 - `unreal-materials-python` — building materials, material functions and parameter collections from
   Python (MaterialEditingLibrary), Custom HLSL nodes, injecting a function into existing materials,
-  reading compile errors.
+  reading compile errors, a flat unshaded colour look.
+- `unreal-ultra-dynamic-sky` — adding Ultra Dynamic Sky, setting its Blueprint variables via
+  ObjectTools, locking exposure for renders.
 - `project-notes` — per-production notes; read them at the start of any task on a named production.
 
 ## Two channels, use both

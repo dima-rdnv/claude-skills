@@ -47,6 +47,11 @@ unreal.EditorAssetLibrary.save_loaded_asset(asset)
 - **Never reorder an MPC's parameter arrays.** Append new parameters at the END. Inserting in the
   middle shifts the collection's layout; already-compiled materials read the wrong slots.
   `MEL.recompile_material` on each user afterwards.
+- **Rebuilding a material function in place (delete all nodes, recreate) silently disconnects every
+  MaterialFunctionCall that uses it**: the new FunctionInput/Output nodes get new ids, the calling
+  material keeps compiling without errors, but its property pins (BaseColor, Emissive...) are now
+  empty → black surfaces. After a structural rebuild, re-create or re-inject the calling materials;
+  check with `MEL.get_material_property_input_node(mat, MP_BASE_COLOR)` (None = broken).
 - `MaterialExpressionCollectionParameter`: setting `collection` then `parameter_name` via
   `set_editor_property` resolves the parameter id (compiles, values verified in the viewport).
 - `MaterialExpressionTextureObject`: setting `texture` auto-picks the sampler type.
@@ -94,6 +99,18 @@ function output to the property. Unconnected properties fall back to the input's
 Specular 0.5, Metallic 0, Normal (0,0,1)). Skip materials that already contain the call.
 *(Not yet tried on Substrate-native materials with a Slab node on Front Material, nor on
 Material-Attributes materials.)*
+
+## Flat, unshaded colour on lit materials (graphic "cut-out" look)
+Verified with Lumen + Ultra Dynamic Sky: BaseColor 0, Specular 0, Roughness 1, Normal (0,0,1),
+colour only from Emissive → every pixel of a surface renders the same sRGB (p10 = p90). What still
+changes it: auto exposure (lock it), vignette (the largest variation), bloom, local exposure, lens
+flares, fringe, film grain → an unbound PostProcessVolume with high priority overriding
+`vignette_intensity 0, bloom_intensity 0, local_exposure_highlight/shadow_contrast_scale 1,
+lens_flare_intensity 0, scene_fringe_intensity 0, film_grain_intensity 0` (set `override_<name>`
+True on the `settings` struct, then set the struct back). Height fog still tints distant surfaces;
+the emissive still bounces into Lumen GI on neighbours (no per-material switch found in 5.8).
+Calibrate the emissive by measuring rendered pixels (saturated colours shift toward orange/white
+when too bright; the tonemapper is non-linear, so tune the weak channels separately).
 
 ## Data textures (e.g. a float field)
 - Write a 16-bit grayscale PNG with numpy + zlib (no PIL needed), import with `AssetImportTask`
