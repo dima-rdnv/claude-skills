@@ -134,6 +134,16 @@ the emissive still bounces into Lumen GI on neighbours (no per-material switch f
 Calibrate the emissive by measuring rendered pixels (saturated colours shift toward orange/white
 when too bright; the tonemapper is non-linear, so tune the weak channels separately).
 
+## Screen-space colour over sky / whole frame (post-process)
+Post-process material: `material_domain = MD_POST_PROCESS`,
+`blendable_location = BlendableLocation.BL_SCENE_COLOR_AFTER_TONEMAPPING`; `MaterialExpressionSceneTexture`
+with `scene_texture_id = SceneTextureId.PPI_POST_PROCESS_INPUT0` (pin `"Color"`) and `PPI_SCENE_DEPTH`
+(mask R); a Custom node `lerp(Col.rgb, Red, max(step(SkyDist, Depth) * SkyOn, FullOn))` → Emissive.
+After tonemapping the input is display-encoded: a target sRGB value / 255 lands exactly
+((0.914, 0.165, 0.110) rendered (233, 42, 28)). Depth > ~2 km catches sky, volumetric clouds and the
+empty horizon. Put it on a PostProcessVolume: `settings.weighted_blendables.array` += a
+`WeightedBlendable` (weight 1, object = material), then set the settings struct back.
+
 ## Data textures (e.g. a float field)
 - Write a 16-bit grayscale PNG with numpy + zlib (no PIL needed), import with `AssetImportTask`
   (`replace_existing=True, automated=True`), then set `srgb=False`,

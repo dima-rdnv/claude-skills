@@ -71,6 +71,24 @@ The camera cut track takes over the player's view during playback. To keep free 
 player camera while the sequence still animates everything else (e.g. a material parameter), set
 `ps.set_editor_property("disable_camera_cuts", True)` on the same playback settings (verified).
 
+## Easing and hard cuts
+- Non-linear motion (e.g. an accelerating camera, distance ~ (t/T)^3): key the channel on every
+  frame with LINEAR interpolation — exact and simple (481 keys for 20 s at 24 fps is fine).
+- Hard switches of a parameter: keys with `unreal.MovieSceneKeyInterpolation.CONSTANT`
+  (0 at frame 0, 1 at the switch frame).
+
+## Previewing a moment in the editor
+```python
+LSE = unreal.LevelSequenceEditorBlueprintLibrary
+if LSE.get_current_level_sequence() != seq: LSE.open_level_sequence(seq)
+LSE.set_current_time(frame)            # deprecated overload but works in 5.8; display-rate frames
+LSE.refresh_current_level_sequence()
+```
+This evaluates every track on the editor world (camera position, MPC values). **While a sequence
+is open in Sequencer, it re-evaluates its MPC track and overwrites values you set directly with
+`MaterialLibrary.set_scalar_parameter_value`** — preview through the playhead instead (verified:
+a direct preview got reset to frame-0 values before the capture).
+
 ## Reading it back
 `seq.get_bindings()` → `b.get_tracks()` → `t.get_sections()` → `s.get_all_channels()` →
 `c.get_keys()` → `k.get_time().frame_number.value`, `k.get_value()`.
