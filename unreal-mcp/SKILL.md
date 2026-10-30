@@ -16,6 +16,8 @@ Prefer these notes over memory. Anything not tested is marked *(unverified)*.
   parameter collection, auto-play on Play, checking it in PIE.
 - `unreal-ultra-dynamic-sky` — adding Ultra Dynamic Sky, setting its Blueprint variables via
   ObjectTools, locking exposure for renders.
+- `unreal-content-management` — moving assets and maps, redirectors, World Partition / one-file-per-actor
+  levels, what imported samples do to project config, backups, folder colours.
 - `project-notes` — per-production notes; read them at the start of any task on a named production.
 
 ## Two channels, use both
@@ -117,32 +119,14 @@ viewport gives e.g. 1400x444).
   → fatal "World Memory Leaks" (EditorServer.cpp). Hit twice: `duplicate_asset()` of a map, and
   `load_asset()` of a map (for `AssetRenameData`) followed by `load_level()`. The world stays in
   memory as standalone. Create levels with `LevelEditorSubsystem.new_level_from_template(new,
-  template)`.
-- **Moving / renaming a map from a script:** `EditorAssetLibrary.rename_asset` and
-  `AssetTools.rename_assets` get cancelled when the editor's per-user config mentions the map
-  (MRU list, saved viewport positions): a "config INI ... may need Find/Replace ... Continue?" prompt
-  auto-answers Cancel in unattended scripts. Instead: `load_level(old)` →
-  `EditorLoadingAndSavingUtils.save_map(editor_world, new)` — this writes a COPY at `new` and the
-  editor keeps `old` open, with the copy now in memory as an asset → restart the editor, then
-  `load_level(new)`, save it (references through redirectors get rewritten), delete the old map.
-  (`find_asset_data(path).is_asset_loaded()` tells you whether a map is in memory without loading it.)
-- Moving ordinary assets: `EditorAssetLibrary.rename_asset` works, but **move a set together or
-  dependencies first**: an asset moved before what it references saves the old paths, and if no
-  redirector is left for those (it only appears where an on-disk referencer still points), the
-  reference is lost ("LoadErrors: ... dependent package ... was not available"). Rebuild such assets.
-  `AssetTools.fixup_referencers` is NOT exposed to Python in 5.8 — load and resave the referencers,
-  then delete the `ObjectRedirector` assets.
-- Sequencer possessable bindings did not survive moving the level (camera stopped moving) — rebuild
-  the bindings after a level move.
-- Adding a sample project's content to a project (e.g. Electric Dreams via the launcher) brings its
-  config: here it REPLACED `DefaultEngine.ini` (our remote-execution section vanished → re-enable it
-  live with ObjectTools `set_properties` on `/Script/PythonScriptPlugin.Default__PythonScriptPluginSettings`
-  `{"bRemoteExecution": true}` and re-add it to the ini) and set its startup map,
-  `GlobalDefaultGameMode`, game instance and audio settings. Fix: `GameMapsSettings` CDO
-  `editor_startup_map` + the ini line, and a per-level game mode override.
+  template)`; check `find_asset_data(path).is_asset_loaded()` before opening a map you touched.
+- Moving, renaming or reorganising content (maps, World Partition, redirectors, imported samples):
+  load `unreal-content-management` first.
 - After a crash a *CrashReportClientEditor* window stays open; the editor can be relaunched with
   `UnrealEditor.exe "<path>.uproject"` (launching without the Epic launcher skips its login —
-  fine for editing; Fab needs the launcher).
+  fine for editing; Fab needs the launcher). If an imported sample replaced `DefaultEngine.ini`,
+  remote execution may be off after a restart: re-enable it via ObjectTools `set_properties` on
+  `/Script/PythonScriptPlugin.Default__PythonScriptPluginSettings` `{"bRemoteExecution": true}`.
 
 ## Logs and errors
 - `<Project>/Saved/Logs/<Project>.log`. Search `Critical error`, `Fatal error` for crashes,
