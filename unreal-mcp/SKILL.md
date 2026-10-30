@@ -12,12 +12,14 @@ Prefer these notes over memory. Anything not tested is marked *(unverified)*.
 - `unreal-materials-python` — building materials, material functions and parameter collections from
   Python (MaterialEditingLibrary), Custom HLSL nodes, injecting a function into existing materials,
   reading compile errors, a flat unshaded colour look.
-- `unreal-sequencer-python` — Level Sequences from Python: camera transform, camera cut, animating a
-  parameter collection, auto-play on Play, checking it in PIE.
+- `unreal-sequencer-python` — Level Sequences from Python: camera transform, camera on a movable rail,
+  camera cut, animating a parameter collection, auto-play on Play, checking it in PIE.
 - `unreal-ultra-dynamic-sky` — adding Ultra Dynamic Sky, setting its Blueprint variables via
   ObjectTools, locking exposure for renders.
 - `unreal-content-management` — moving assets and maps, redirectors, World Partition / one-file-per-actor
-  levels, what imported samples do to project config, backups, folder colours.
+  levels, what imported samples do to project config, backups, folder colours, tidying the Outliner.
+- `unreal-editor-tools` — one-click tools for the user: a custom main-menu entry (ToolMenus) registered
+  at every start, undoable actions, piloting / viewport camera, Game View.
 - `project-notes` — per-production notes; read them at the start of any task on a named production.
 
 ## Two channels, use both
@@ -79,6 +81,15 @@ Pass a `captureTransform` (location cm, rotation pitch/yaw/roll deg) to shoot fr
 and `annotations` with zeros (`gridSpacing 0, maxLabelDistance 0, maxLabels 0, classFilter
 {"refPath": ""}`) for a clean image. The image has the viewport's aspect ratio (a wide editor
 viewport gives e.g. 1400x444).
+- Call it as `call_tool(toolset_name="EditorToolset.EditorAppToolset", tool_name="CaptureViewport")` —
+  the full dotted name as `tool_name` gives "Unknown tool".
+- While Sequencer locks the viewport to a shot camera, the capture uses that camera's FOV (e.g. 52.7°
+  for 24 mm on a 23.76 mm filmback) even with a `captureTransform`; the aspect stays the viewport's,
+  and changes when the user resizes panels.
+- Editor sprites / volume outlines / selected splines appear in captures: switch on Game View
+  (`LevelEditorSubsystem.editor_set_game_view(True)`, = G) for render-like images.
+- A capture pose far from the previous frame shows motion blur (temporal); capture again at the same
+  pose for a sharp image.
 
 ## Python remote execution
 - Enable: Project Settings → Plugins → Python → *Enable Remote Execution?* or in `DefaultEngine.ini`:

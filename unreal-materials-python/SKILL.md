@@ -1,6 +1,6 @@
 ---
 name: unreal-materials-python
-description: Building and editing Unreal Engine 5.8 materials from Python (MaterialEditingLibrary) — materials, material functions with inputs/outputs, Material Parameter Collections, Custom HLSL nodes (helper functions, texture sampling), per-instance pivots, injecting a function between a material's existing inputs and its outputs, importing data textures, and finding compile errors. Includes verified traps (struct constructors, ComponentMask defaults, delete_all skipping nodes, MPC reordering). Load with unreal-mcp.
+description: Building and editing Unreal Engine 5.8 materials from Python (MaterialEditingLibrary) — materials, material functions with inputs/outputs, Material Parameter Collections, Custom HLSL nodes (helper functions, texture sampling), per-instance pivots, injecting a function between a material's existing inputs and its outputs (incl. Substrate surfaces, decals and Single Layer Water), finding every master a level really uses, importing data textures, and finding compile errors. Includes verified traps (struct constructors, ComponentMask defaults, delete_all skipping nodes, MPC reordering). Load with unreal-mcp.
 ---
 
 # Unreal materials from Python
@@ -119,8 +119,30 @@ source node + output name, connect it to the function input of the same name, th
 function output to the property. Unconnected properties fall back to the input's preview value
 (use the engine's defaults: BaseColor 0.5 grey *(engine default unverified)*, Roughness 0.5,
 Specular 0.5, Metallic 0, Normal (0,0,1)). Skip materials that already contain the call.
-*(Not yet tried on Substrate-native materials with a Slab node on Front Material, nor on
-Material-Attributes materials.)*
+*(Not yet tried on Material-Attributes materials.)*
+
+### Substrate-native materials (Front Material pin)
+- Surfaces: a function with a `FUNCTION_INPUT_SUBSTRATE` input "Front" → `SubstrateSelect(A = Front,
+  B = your Slab, SelectValue = mask)` (A when mask ≤ 0.5) → output; insert it between the Front
+  Material source and the pin. Translucent cards: `SubstrateWeight(Front, 1 - mask)`.
+- **Single Layer Water** (SLW) can't go through Select: "Operator Select cannot be used with the
+  following data flowing through {SLW}". For small water meshes (puddles) leave Front alone and sink
+  the mesh instead: World Position Offset = original + (0, 0, -1000) × mask.
+- **Decals** (`MD_DEFERRED_DECAL`, root = `SubstrateConvertToDecal`, pins `DecalMaterial`, `Coverage`):
+  the converter must stay the root, and decals can't use `Bounds` or instance transforms ("Failed to
+  compile"). Put a function on the **Coverage** pin instead (coverage × (1 − mask)), mask computed
+  from `WorldPosition` only (the pixel's own position). Unconnected Coverage = 1 → give the function
+  input a preview value of 1. `MEL.get_material_expression_input_names(node)` lists the pins;
+  `get_inputs_for_material_expression` returns sources in the same order (None = unconnected).
+
+### Did you catch every master?
+Don't trust a list from the material assets: survey what the level actually renders —
+every `MeshComponent` (instance counts for ISMs/foliage/PCG) → `get_materials()` → walk
+`MaterialInstance.parent` to the base → count. In a 15k-actor Electric Dreams level this found 10
+masters the asset survey had missed (ivy, PCG ground, puddles, signs — the ivy showed as dark streaks
+on otherwise red cliffs; hiding all 751 decals changed nothing, which ruled decals out). Then force
+the end state (e.g. a "finish" parameter = 0 so everything is converted), capture, and look for
+anything not converted.
 
 ## Flat, unshaded colour on lit materials (graphic "cut-out" look)
 Verified with Lumen + Ultra Dynamic Sky: BaseColor 0, Specular 0, Roughness 1, Normal (0,0,1),

@@ -1,6 +1,6 @@
 ---
 name: unreal-content-management
-description: Moving, renaming and reorganising Unreal Engine 5.8 content from Python without breaking it — batch asset moves and redirectors, moving maps (Save As route and the crash to avoid), World Partition and one-file-per-actor levels (external actors, the WorldPartitionRenameDuplicateBuilder commandlet), what adding a sample project's content does to project config, backups, and Content Browser folder colours. Load with unreal-mcp before any folder clean-up or asset move.
+description: Moving, renaming and reorganising Unreal Engine 5.8 content from Python without breaking it — batch asset moves and redirectors, tidying a level's Outliner and a sample's leftovers, moving maps (Save As route and the crash to avoid), World Partition and one-file-per-actor levels (external actors, the WorldPartitionRenameDuplicateBuilder commandlet), what adding a sample project's content does to project config, backups, and Content Browser folder colours. Load with unreal-mcp before any folder clean-up or asset move.
 ---
 
 # Reorganising Unreal content safely
@@ -80,6 +80,24 @@ Dreams sample (44 GB, 24k files) and Ultra Dynamic Sky. Load `unreal-mcp` first.
   the free camera.
 - A duplicate plugin entry can appear in the `.uproject` (fix with a JSON round-trip while the editor
   is closed or before it reads it).
+
+## Tidying a level's Outliner (and a sample's leftovers)
+- Folders are just a property per actor: `actor.set_folder_path("A/B")` (creates the folder);
+  `LevelEditorSubsystem.delete_actor_folder(name)` is the only folder API in 5.8 (actors directly in a
+  deleted folder move up a level). Moving 15,130 actors of a one-file-per-actor level took 2.5 s; the
+  save (15k external actor packages) 35 s. A clear top level: your own folder + one wrapper folder
+  around the sample's own layout (`<Sample>/<old path>`), loose root actors into `<Sample>/.../Unsorted`.
+- Survey first: actor count per folder and per class, plus every actor with a `TextRenderComponent`
+  (sample instructions / labels live in Blueprints too, e.g. a drone-controls BP).
+- Electric Dreams leftovers not needed for a cinematic: text actors, the hover drone + its instructions
+  BP, PCG demo marker / helper / shortcut script, a Niagara lens-flare spawner, ~88 cine cameras, demo
+  sequences (check `get_sequence().get_bindings()` and `auto_play` first — keep ones that animate
+  scenery, e.g. the kite), colour calibrators (hidden in game), a Substrate preview mesh, an
+  `EditorSkySphere` skybox (compare a capture with it temporarily hidden —
+  `set_is_temporarily_hidden_in_editor` — before deleting). Keep PCG generator BPs/volumes (they own
+  the generated content) and `PCGPartitionActor`s.
+- `EditorActorSubsystem.destroy_actors(list)` then `save_current_level()` deletes their actor files.
+  Leave the original map untouched (work on a Save As copy).
 
 ## Folder colours (Content Browser)
 No Python API. Stored by `AssetViewUtils::SetPathColor` in GConfig section `[PathColor]` of
