@@ -56,8 +56,16 @@ Dreams sample (44 GB, 24k files) and Ultra Dynamic Sky. Load `unreal-mcp` first.
   `UnrealEditor-Cmd.exe <project> <MapPath> -run=WorldPartitionBuilderCommandlet
   -Builder=WorldPartitionRenameDuplicateBuilder -NewPackage=<NewPackagePath> -Rename`
   *(found in source `WorldPartitionRenameDuplicateBuilder.h`; not run yet — unverified)*.
-  Non-WP one-file-per-actor levels (level-instance assemblies) have no safe scripted move.
-  Electric Dreams had 105 such maps → we decided to leave its layout alone.
+  Non-WP one-file-per-actor levels can't be renamed safely while closed either.
+  Electric Dreams had 105 maps with external actors → we decided to leave its layout alone.
+- **Duplicating a one-file-per-actor level works with Save As** (verified): open it (non-WP → all
+  actors load), `EditorLoadingAndSavingUtils.save_map(world, "/Game/.../NewMap")`. FileHelpers'
+  SaveMap duplicates an existing world via `ObjectTools::DuplicateSingleObject` and saves its external
+  packages: ElectricDreams_Env (15,245 actors) → 15,171 actor files + 61 external objects under
+  `__ExternalActors__/<new path>` in 272 s, no errors. The editor stays on the original; the copy is
+  in memory → restart before opening it (or make it the startup map and restart).
+- `get_world_partition()` on the editor world tells WP from plain one-file-per-actor levels (Electric
+  Dreams' main level is NOT World Partition despite 15k external actor files).
 
 ## What adding a sample's content does (Electric Dreams via the launcher "Add to project")
 - Content lands as ~20 top-level folders (not one folder).
