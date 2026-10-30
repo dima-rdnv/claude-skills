@@ -113,9 +113,21 @@ viewport gives e.g. 1400x444).
   `EditorAppToolset.StopPIE` / `IsPIERunning` via MCP.
 
 ## Crash traps (each one killed the editor)
-- **Never `EditorAssetLibrary.duplicate_asset()` a map and then `load_level()` it in the same
-  session** → fatal "World Memory Leaks" (EditorServer.cpp). The duplicate stays in memory as
-  standalone. Create levels with `LevelEditorSubsystem.new_level_from_template(new, template)`.
+- **Never load a map package as an ordinary asset and then `load_level()` it in the same session**
+  → fatal "World Memory Leaks" (EditorServer.cpp). Hit twice: `duplicate_asset()` of a map, and
+  `load_asset()` of a map (for `AssetRenameData`) followed by `load_level()`. The world stays in
+  memory as standalone. Create levels with `LevelEditorSubsystem.new_level_from_template(new,
+  template)`.
+- **Moving / renaming a map from a script:** `EditorAssetLibrary.rename_asset` and
+  `AssetTools.rename_assets` get cancelled when the editor's per-user config mentions the map
+  (MRU list, saved viewport positions): a "config INI ... may need Find/Replace ... Continue?" prompt
+  auto-answers Cancel in unattended scripts. Use Save As instead: `load_level(old)` →
+  `EditorLoadingAndSavingUtils.save_map(editor_world, new)` → fix up redirectors → delete the old
+  map (only delete it, never `load_level` it again). Ordinary assets move fine with `rename_asset`
+  (redirectors are left where something still points; `AssetTools.fixup_referencers` cleans them).
+- Adding a sample project's content to a project (e.g. Electric Dreams via the launcher) also merges
+  its config: startup map, `GlobalDefaultGameMode`, game instance, audio settings — Play in your own
+  levels changes until you set a per-level game mode override.
 - After a crash a *CrashReportClientEditor* window stays open; the editor can be relaunched with
   `UnrealEditor.exe "<path>.uproject"` (launching without the Epic launcher skips its login —
   fine for editing; Fab needs the launcher).
