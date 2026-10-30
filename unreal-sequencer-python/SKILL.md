@@ -176,6 +176,35 @@ sub.render_queue_with_executor(unreal.MoviePipelineNewProcessExecutor)          
   `sub.get_active_executor().cancel_all_jobs()`. First job ~5 min (level load + shaders), later ones faster.
 - Camera cuts: a cut inside a subsequence won over the parent shot's cut in MRQ — keep cuts only at the
   level that is rendered.
+- **EXR**: `MoviePipelineImageSequenceOutput_EXR` has `compression` (DWAA/DWAB/ZIP/PIZ/…), `multilayer`,
+  `multipart`. Only the MULTILAYER writer honours `compression` — single-layer EXRs came out ZIP whatever
+  was set (it falls back to the generic image writer). One pass in multilayer = plain R/G/B/A channels;
+  DWAB cut a 2884x1800 frame from 20 MB (ZIP) to 3.6 MB. The beauty is half float (the deferred pass
+  is 16-bit; "Use High Precision (32-bit) Output" exists only for additional post-process passes).
+- **Linear / ACES**: `MoviePipelineColorSetting`: `disable_tone_curve = True` + `ocio_configuration`
+  (`OpenColorIODisplayConfiguration`: `is_enabled`, `color_configuration` =
+  `OpenColorIOColorConversionSettings`: `configuration_source` (an `OpenColorIOConfiguration` asset from
+  `OpenColorIOConfigurationFactoryNew`, `configuration_file` FilePath `"ocio://cg-config-latest"` = the
+  built-in ACES CG config, `desired_color_spaces` [OpenColorIOColorSpace with `color_space_name`]),
+  `source_color_space` "Linear Rec.709 (sRGB)", `destination_color_space` "ACEScg").
+  After-tonemapping post-process effects (titles, screen tints) then work on linear values — render them
+  as a separate pass instead. **Failed in practice:** with colour spaces set by name only from Python, the
+  render stamped "OCIO INVALID" over every frame (the plugin's error pattern; the log only said the config
+  "should be resaved"). Safe route: tone curve off, no OCIO in UE (scene-linear Linear Rec.709 / sRGB
+  primaries), and let the comp's OCIO convert (input colour space "Linear Rec.709 (sRGB)"). Check one
+  frame before a full render when OCIO is on.
+- **Extra pass** (e.g. a matte): deferred pass `additional_post_process_materials` =
+  [`MoviePipelinePostProcessPass` with `enabled`, `material`, `name`, `high_precision_output`]; the
+  material is Post Process / After Tonemapping. In a multilayer EXR it arrived as `FinalImage<Name>.R/G/B/A`
+  (float). Not needed: `disable_multisample_effects` (that would drop DoF / motion blur for the beauty).
+- Speed (UE 5.8, RTX 4090, Lumen + Nanite + UDS clouds, 2884x1800): 8 temporal samples 0.63 s / frame
+  (ZIP EXR), ~1.0 s with DWAB + a 32-bit matte pass + OCIO; 1 sample + TSR 0.2 s / frame (720 frames in
+  3 min 45 s including start-up) — the "fast" preset. ffmpeg 7.1 can't decode DWAB EXRs (black frames). Start-up ~1-3 min; the first run
+  after material changes also compiles shaders (~7 min, 16 ShaderCompileWorkers).
+- Editor Python globals persist between remote runs: a module-level `X = globals().get("X", default)`
+  picked up 16 from an older run instead of the new default 8 — pass every such value explicitly.
+- After Effects 26.5 (OCIO, ACEScg project) can import a multilayer EXR sequence as
+  `ImportAsType.COMP_CROPPED_LAYERS` (one layer per EXR layer); `COMP` is refused.
 - Media (a title movie) in renders: a video file isn't frame-accurate in MRQ; use an image sequence. For
   an overlay we baked the frames into one tiled texture and picked the frame from the sequence time in
   a post-process material (exact, no media player) — see unreal-materials-python.
