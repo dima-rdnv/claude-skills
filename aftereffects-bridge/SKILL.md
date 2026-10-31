@@ -114,6 +114,19 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 - A script that throws midway keeps its earlier edits (e.g. a half-configured queue item) — check
   the queue before retrying, and guard against adding a second copy.
 
+## Swapping and adding renders (verified, AE 2026, 32 bpc OCIO project)
+- A new version of a render already in comps: `footageItem.replaceWithSequence(new File(".../x.0000.exr"),
+  false)` swaps the files under the same item; every comp layer, effect and timing stays. Re-set
+  `mainSource.conformFrameRate` afterwards.
+- Footage colour management (input colour space) is not exposed to scripting (`mainSource.reflect`
+  shows only alpha / premul). Copy it from a footage item the user set up: deselect all items, select
+  that one, `app.executeCommand(app.findMenuCommandId("Remember Interpretation"))` (2254), select the new
+  ones, `"Apply Interpretation"` (2255). It also copies alpha and frame-rate interpretation.
+- `layer.copyToComp(comp)` keeps the source layer's index rather than landing on top: copying two
+  adjustment layers came out in the wrong order. List the order afterwards and `moveToBeginning()`.
+- A multilayer EXR imported as `ImportAsType.FOOTAGE` is one item showing the main RGBA; extra layers
+  (depth, mattes) are read with the EXtractoR effect on a layer of it.
+
 ## Inspecting
 - Find comps by name over `app.project.item(i)` (`CompItem`), use ids afterwards (`itemByID`).
 - `comp.usedIn` + the layer's `startTime`, `stretch`, `timeRemapEnabled` give the time mapping. A
