@@ -48,6 +48,15 @@ status line showing the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringif
   "Responding"), or listening in another folder (the user may have started a different copy: ask
   what the status line says). Don't resend; it runs as soon as the bridge is back. After an
   hour its signature has expired and it is rejected; then send it again.
+- **Diagnosing a stall:** `send.sh`'s timeout message prints the age of `<ROOT>/heartbeat.json`
+  (rewritten every 5 s while the bridge ticks) and the last lines of `<ROOT>/bridge.log` (starts,
+  every script, rejections, Stop/Start clicks, errors). Fresh heartbeat + `paused: true` = user
+  pressed Stop. Stale heartbeat = AE stopped calling the bridge: the log says why if the panel
+  stopped itself ("panel controls stopped working": ask the user to reopen it); `orphan.txt` in
+  ROOT means the script engine was wiped (ask the user to reopen the panel). A stale heartbeat with
+  neither means AE itself isn't idling (open dialog, render, preview): ask what AE is doing, and
+  report the times to the user. Seen 30–31 Oct 2026: stalls of 3–8 min, then queued scripts all ran
+  at once; cause not yet known. A docked panel collapsed in a stacked group keeps running (verified).
 - Wrong folder: a script calling `$.global.ClaudeBridge.useFolder(path)` switches and remembers it.
   It returns `""` or the reason (it refuses AE's Scripts folders and unwritable folders). The
   calling script's own JSON still lands in the folder it came from.

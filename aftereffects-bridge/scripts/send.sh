@@ -18,7 +18,19 @@ rm -f "$BRIDGE/outbox/$n.json"
 # would otherwise pick up a half-written file
 { printf '// claude-bridge-sig %s %s\n' "$ts" "$sig"; cat "$STAGE/$n.jsx"; } > "$BRIDGE/inbox/$n.tmp" && mv "$BRIDGE/inbox/$n.tmp" "$BRIDGE/inbox/$n.jsx"
 for i in $(seq 1 "${2:-120}"); do [ -f "$BRIDGE/outbox/$n.json" ] && break; sleep 1; done
-if [ ! -f "$BRIDGE/outbox/$n.json" ]; then echo "TIMEOUT - is the Claude Bridge panel stopped or closed?"; exit 1; fi
+if [ ! -f "$BRIDGE/outbox/$n.json" ]; then
+  echo "TIMEOUT - $n.jsx is still waiting in inbox/"
+  hb="$BRIDGE/heartbeat.json"
+  if [ -f "$hb" ]; then
+    ep=$(sed -n 's/.*"epoch":\([0-9]*\).*/\1/p' "$hb")
+    echo "heartbeat $(( $(date +%s) - ${ep:-0} )) s old (fresh is under 10 s; stale means AE isn't calling the bridge): $(cat "$hb")"
+  else
+    echo "no heartbeat.json: the panel is closed, or older than this send.sh"
+  fi
+  [ -f "$BRIDGE/orphan.txt" ] && echo "orphan.txt: $(cat "$BRIDGE/orphan.txt")"
+  [ -f "$BRIDGE/bridge.log" ] && { echo "last lines of bridge.log:"; tail -n 8 "$BRIDGE/bridge.log"; }
+  exit 1
+fi
 # summary line via Python if a real one runs (Windows may only have the Microsoft Store stub),
 # otherwise the start of the raw JSON
 for py in python3 python; do

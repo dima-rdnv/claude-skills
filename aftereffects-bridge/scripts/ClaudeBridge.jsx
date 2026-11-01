@@ -162,10 +162,53 @@
         return { src: body.replace(/^﻿/, "") };
     }
 
+    // ---------- log file + heartbeat, for when the bridge goes quiet ----------
+    // <bridge folder>/bridge.log gets every start, script, rejection, Stop/Start, error and the reason
+    // a bridge stops itself. heartbeat.json is rewritten every 5 s while ticks arrive, so a stale one
+    // means AE stopped calling the bridge at all. send.sh shows both when it times out.
+    // The log keeps its last LOG_DAYS days (at most LOG_LINES lines): trimmed at start and every 6 h.
+    var INSTANCE = String(new Date().getTime()).slice(-6), lastBeat = 0, lastTrim = 0, LOG_DAYS = 7, LOG_LINES = 5000;
+    function pad(n) { return ("0" + n).slice(-2); }
+    function stamp(d) { d = d || new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+    function logLine(s) {
+        try {
+            var f = new File(ROOT + "/bridge.log");
+            f.encoding = "UTF-8"; f.lineFeed = "Unix"; f.open("a"); f.writeln(stamp() + "  [" + INSTANCE + "]  " + s); f.close();
+        } catch (e) {}
+    }
+    function trimLog() {
+        lastTrim = new Date().getTime();
+        try {
+            var older = new File(ROOT + "/bridge.log.1");   // left by the first logging version
+            if (older.exists) older.remove();
+            var f = new File(ROOT + "/bridge.log");
+            if (!f.exists) return;
+            var cutoff = stamp(new Date(lastTrim - LOG_DAYS * 86400000)), lines = readText(f).split("\n"), keep = [];
+            for (var i = 0; i < lines.length; i++) {
+                var l = lines[i].replace(/\r$/, "");
+                if (l && l.substring(0, 19) >= cutoff) keep.push(l);   // lines start "YYYY-MM-DD HH:MM:SS"
+            }
+            if (keep.length > LOG_LINES) keep = keep.slice(keep.length - LOG_LINES);
+            if (keep.length !== lines.length - 1) writeText(f, keep.length ? keep.join("\n") + "\n" : "");
+        } catch (e) {}
+    }
+    function beat() {
+        var now = new Date().getTime();
+        if (now - lastBeat < 5000) return;
+        lastBeat = now;
+        try {
+            writeText(new File(ROOT + "/heartbeat.json"), stringify({ time: stamp(), epoch: Math.floor(now / 1000), instance: INSTANCE,
+                paused: B.paused, busy: B.busy, runs: B.count, docked: thisObj instanceof Panel }));
+        } catch (e) {}
+    }
+
     var B = $.global.ClaudeBridge;
-    if (B && B.taskId) { try { app.cancelTask(B.taskId); } catch (e) {} }
+    if (B && B.taskId) { try { app.cancelTask(B.taskId); } catch (e) {} logLine("replacing bridge " + B.instance); }
     var seen = (B && B.seen) || {};   // survives reopening the panel, so a run script can't be replayed
-    B = $.global.ClaudeBridge = { busy: false, paused: false, taskId: 0, count: 0, stringify: stringify, readText: readText, writeText: writeText, ROOT: ROOT, seen: seen };
+    B = $.global.ClaudeBridge = { busy: false, paused: false, taskId: 0, count: 0, stringify: stringify, readText: readText, writeText: writeText, ROOT: ROOT, seen: seen, instance: INSTANCE, logLine: logLine };
+    trimLog();
+    var orphan = new File(ROOT + "/orphan.txt");
+    if (orphan.exists) { logLine("found orphan.txt: " + readText(orphan)); orphan.remove(); }
 
     // ---------- UI ----------
     // the button and status share the top row, so the panel still works shrunk to a strip or docked
@@ -184,8 +227,9 @@
         status.text = (B.paused ? "Stopped" : "Listening…") + " (inbox: " + INBOX.fsName + ")" + (B.count ? "  ·  " + B.count + " run" : "");
         status.helpTip = INBOX.fsName;
     }
-    // a docked panel that was closed leaves its controls invalid; the task must not keep firing then
-    function alive() { try { status.text = status.text; return true; } catch (e) { return false; } }
+    // a docked panel that was closed leaves its controls invalid; the task must not keep firing then.
+    // Returns "" or the error the controls gave.
+    function alive() { try { status.text = status.text; return ""; } catch (e) { return e.toString(); } }
     B.log = addLog;
     B.win = win;
 
@@ -195,16 +239,26 @@
     B.useFolder = function (path) {
         path = slash(path);
         if (inScripts(path)) return "pick a folder outside After Effects' Scripts folders";
+        var from = ROOT;
         if (!setRoot(path)) return "can't write to " + path;
         app.settings.saveSetting(SECTION, KEY, ROOT);
         B.ROOT = ROOT;
+        trimLog();
+        logLine("switched here from " + from);
         addLog("Folder: " + new Folder(ROOT).fsName);
         idle();
         return "";
     };
 
     B.tick = function () {
-        if (!alive()) { try { app.cancelTask(B.taskId); } catch (e) {} return; }
+        var dead = alive();
+        if (dead) {
+            logLine("panel controls stopped working (" + dead + "), so this bridge stops; reopen the panel");
+            try { app.cancelTask(B.taskId); } catch (e) {}
+            return;
+        }
+        beat();
+        if (new Date().getTime() - lastTrim > 6 * 3600000) trimLog();
         if (B.busy || B.paused) return;
         var files = INBOX.getFiles("*.jsx");
         if (!files || !files.length) return;
@@ -223,9 +277,11 @@
                     var rej = new File(rejDir.fsName + "/" + f.name);
                     if (rej.exists) rej.remove();
                     f.copy(rej); f.remove();
+                    logLine("REJECTED " + f.name + " – " + check.error);
                     addLog("REJECTED " + f.name + " – " + check.error);
                     continue;
                 }
+                logLine("run " + f.name);
                 status.text = "Running " + f.name + "…";
                 var src = check.src;
                 app.beginUndoGroup("Claude: " + name);
@@ -242,28 +298,37 @@
                 writeText(new File(doneDir.fsName + "/" + f.name), src);   // kept without the signature line
                 f.remove();
                 B.count++;
+                logLine((out.ok ? "OK   " : "FAIL ") + f.name + " (" + out.ms + " ms)" + (out.ok ? "" : " – " + out.error));
                 addLog((out.ok ? "OK   " : "FAIL ") + f.name + " (" + out.ms + " ms)" + (out.ok ? "" : " – " + out.error));
             }
         } catch (e2) {
-            addLog("Bridge error: " + e2.toString());
+            logLine("Bridge error: " + e2.toString() + " (line " + e2.line + ")");
+            try { addLog("Bridge error: " + e2.toString()); } catch (e3) {}
+        } finally {
+            B.busy = false;   // never left set, or every later tick would skip
         }
-        B.busy = false;
         idle();
     };
     runBtn.onClick = function () {
         B.paused = !B.paused;
+        logLine(B.paused ? "Stop pressed" : "Start pressed");
         runBtn.text = B.paused ? "Start" : "Stop";
         addLog(B.paused ? "Stopped" : "Started");
         idle();
     };
 
-    B.taskId = app.scheduleTask("if ($.global.ClaudeBridge) $.global.ClaudeBridge.tick();", 1000, true);
+    // The task only holds a string; if AE ever wipes the script engine, the bridge object is gone but
+    // the task still fires. Then it leaves orphan.txt (once) so the log shows when that happened.
+    B.taskId = app.scheduleTask("if ($.global.ClaudeBridge && $.global.ClaudeBridge.tick) $.global.ClaudeBridge.tick(); " +
+        "else { try { var f = new File(" + q(ROOT + "/orphan.txt") + "); if (!f.exists) { f.open('w'); " +
+        "f.write('task fired at ' + new Date() + ' but the bridge object was gone (script engine reset?)'); f.close(); } } catch (e) {} }", 1000, true);
     win.onResizing = win.onResize = function () { this.layout.resize(); };
     if (win instanceof Window) {
-        win.onClose = function () { try { app.cancelTask(B.taskId); } catch (e) {} B.paused = true; };
+        win.onClose = function () { try { app.cancelTask(B.taskId); } catch (e) {} B.paused = true; logLine("window closed, bridge stopped"); };
         win.center(); win.show();
     } else { win.layout.layout(true); win.layout.resize(); }
     idle();
+    logLine("started (" + (thisObj instanceof Panel ? "docked panel" : "window") + ") in " + ROOT + ", AE " + app.version);
     addLog("Bridge started in " + new Folder(ROOT).fsName + " – signed scripts only" +
         (KEY_FILE.exists ? "" : " (no key yet: send.sh creates it)"));
 })(this);
