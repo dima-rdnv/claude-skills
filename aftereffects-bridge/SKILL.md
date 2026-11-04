@@ -86,7 +86,24 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   the import came back as one footage item — the extra layers stay inside (EXtractoR), so ship mattes as
   their own image sequence.
 - After the user restarts AE, check which project is open (`app.project.file`) before running anything
-  that looks for comps by name; the unsaved state of the previous session is gone.
+  that looks for comps by name; the unsaved state of the previous session is gone. Seen 4 Nov 2026:
+  a fresh panel ran queued scripts against an empty Untitled project, then the heartbeat stalled
+  until the user had the real project open and AE idle.
+- ExtendScript is ES3: unquoted `in` / `out` as object keys fail with "SyntaxError: Illegal use of
+  reserved word" — write `{"in": L.inPoint, "out": L.outPoint}`.
+
+## Cinema 4D → AE 3D data (verified 4 Nov 2026, to 0.04 px)
+- Positions: AE = `[W/2 + x·s, H/2 − y·s, z·s]` (C4D cm, s = compWidth / C4D render width; C4D origin
+  at comp centre). Camera: `layers.addCamera`, position the same way, `pointOfInterest` = position +
+  forward with Y negated, `cameraOption.zoom` = compWidth · focal / aperture (horizontal gate). Exact
+  for bank 0 (POI cameras can't roll).
+- 20 nulls × 841 keys via `position.setValuesAtTimes` + effects took 26 s. Check with an
+  `ADBE Point Control` whose expression is `thisLayer.toComp(thisLayer.anchorPoint)`, read with
+  `valueAtTime(t, false)` and compared with the C4D projection.
+- Comp fps ≠ C4D fps or a still render in the comp: key at C4D seconds (f / fps_c4d) and drive the
+  position with an expression `valueAtTime(f / fps)` where f comes from a control null (checkbox
+  Animate → `time·fps + offset`, else a Still Frame slider). Expressions on a property with keys can
+  `valueAtTime` their own keys; a checkbox works the same way (behind-the-globe visibility).
 
 ## Rendering preview frames
 - `comp.saveFrameToPng(t, file)` is **asynchronous**: the script returns (ms ≈ 1) and the JSON

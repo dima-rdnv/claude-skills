@@ -120,6 +120,11 @@ In C4D: Extensions → Socket Server Plugin → Start Server. After a Claude res
   (`computer_resolve_access` → `computer_request_access`); a context-menu item may need two clicks.
 - On Windows, Mac-only tools (`sips`) don't exist — use the in-memory render path in
   `cinema4d-render-preview`.
+- **Baking MoGraph clone positions** (verified 2026.4): after `SetTime` + `ExecutePasses`,
+  `cloner.GetCache()` is a Null whose children are the clones ("Type 1 0" … "Type 1 19", index =
+  last word); `GetMg()` on objects inside them is world space. 20 clones × 841 frames took 7 s.
+  Check against a frame with `render_preview_image(renderer="hardware")` (2.5 s) when Redshift is
+  slow; RS lights inside clones made a Redshift preview sit at 0 % for 70 s.
 
 ## Testing without touching the user's project (verified)
 - For import/attribute questions, work in a throwaway `c4d.documents.BaseDocument()` (MergeDocument
