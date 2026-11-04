@@ -207,6 +207,21 @@ Per property: grab every key (`keyTime`, `keyValue`, `keyIn/OutInterpolationType
   Child layers don't inherit opacity — link it: `thisComp.layer("Button").transform.opacity`.
 - Effects by match name: `"ADBE Slider Control"`, `"ADBE Gaussian Blur 2"` (`-0001` = blurriness).
 
+## HUD precomps with Essential Properties (verified 4 Nov 2026)
+- Controls on a guide null inside the precomp; text/shapes read them by expression; expose with
+  `prop.canAddToMotionGraphicsTemplate(comp)` + `prop.addToMotionGraphicsTemplateAs(comp, name)`.
+  On an instance they live in `layer.property("ADBE Layer Overrides").property(name)` and accept
+  expressions (e.g. a value computed from another layer). They list in reverse order of adding.
+- Re-fetch effect properties by name after every `addProperty` (old references go invalid).
+  `setPropertyParameters([...])` on a Dropdown Control replaces the effect: a lookup by its new name
+  came back null — find it by `matchName === "ADBE Dropdown Control"` / `propertyIndex`, set the
+  items, then set `name`, then the value.
+- Corner brackets that follow a size slider: open paths with expressions
+  `createPath([[-h,-h+L],[-h,-h],[-h+L,-h]], [], [], false)` in one group + one stroke. Hatch: a line
+  + Repeater in a group rotated 45°, clipped by `layer.setTrackMatte(matte, TrackMatteType.ALPHA)`
+  (matte `enabled = false`). One "ADBE Fill" effect per layer with its colour linked to the Color
+  control tints text and strokes alike.
+
 ## Keeping this skill current
 After a session that used the bridge, add only what was tested in a real project (mark the rest
 *(unverified)*), correct wrong entries instead of appending, keep this file under ~300 lines,
