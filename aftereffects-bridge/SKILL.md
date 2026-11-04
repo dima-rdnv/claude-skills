@@ -1,15 +1,19 @@
 ---
 name: aftereffects-bridge
-description: Driving Adobe After Effects from Claude without an MCP server, through a file-based ExtendScript bridge (a ScriptUI panel that runs .jsx files dropped into an inbox folder and writes JSON results). Covers finding and starting the bridge, sending scripts safely, inspecting comps/layers/keys/expressions, rendering preview frames, retiming keyframes to a voice-over, building UI elements (shape/text layers with expression-driven interactions), and verified traps. Use whenever a task touches After Effects / AE / .aep comps.
+description: Driving Adobe After Effects from Claude without an MCP server, through a file-based ExtendScript bridge (a signed CEP panel that runs signed .jsx files dropped into an inbox folder and writes JSON results). Covers finding and starting the bridge, sending scripts safely, inspecting comps/layers/keys/expressions, rendering preview frames, retiming keyframes to a voice-over, building UI elements (shape/text layers with expression-driven interactions), and verified traps. Use whenever a task touches After Effects / AE / .aep comps.
 ---
 
 # After Effects via the file bridge (verified AE 2026 / 26.5, Windows)
 
-There is no AE MCP server. `scripts/ClaudeBridge.jsx` is a ScriptUI panel (dockable when installed,
-a minimizable window when run as a plain script) that, while open, checks `<ROOT>/inbox` every second, runs
-each `*.jsx` there inside `(function(){ ... })()` (so a top-level `return` works) as **one undo
-step named `Claude: <file>`**, writes `<ROOT>/outbox/<file>.json` = `{file, ok, result | error+line, ms}`
-and moves the script to `done/` (without its signature line).
+There is no AE MCP server. `panel/` is a CEP extension ("Claude Bridge", Window › Extensions):
+while it is open, `index.html` (Node enabled) checks `<ROOT>/inbox` itself once a second and
+writes `<ROOT>/heartbeat.json`, and calls into AE (`ClaudeBridge.tick()` in `panel/host.jsx`) only
+when a script is waiting, so AE is left alone while idle. Each tick takes every `*.jsx` in
+`<ROOT>/inbox`, checks its signature, **moves it to `done/` first** (without its signature line,
+so a script that takes AE down doesn't rerun after the restart), runs it inside
+`(function(){ ... })()` (so a top-level `return` works; `err.line` = line in your file) as **one
+undo step named `Claude: <file>`**, and writes `<ROOT>/outbox/<file>.json` =
+`{file, ok, result | error+line, ms}`.
 **Signed scripts only:** `scripts/send.sh` signs each script with `~/.claude/ae-bridge.key` (created
 on first use; AE reads it from `Folder("~")/.claude`). Anything unsigned, changed after signing,
 older than an hour or already run is refused: `{"ok": false, "rejected": true, "error": "Rejected: …"}`,
@@ -18,64 +22,63 @@ AE; it does not limit what a signed script can do. Scripts that `$.evalFile` a l
 check for that file, so keep such libraries out of synced folders.
 `ROOT` is the folder last set with `ClaudeBridge.useFolder(path)` (the panel has no folder button;
 you switch it when the user asks), remembered in AE's settings (`app.settings`, section
-`ClaudeBridge`, key `root`). Until then: the script's own folder, or `Documents/ClaudeBridge` when
-the script sits in one of AE's Scripts folders (AE lists every script under them, so inbox/done
-must not live there) or its folder is read-only. The panel has one **Stop / Start** button and a
-status line showing the inbox. `$.global.ClaudeBridge` exposes `ROOT`, `stringify`, `readText`,
-`writeText`, `log`, `useFolder`, `win` to scripts.
+`ClaudeBridge`, key `root`), else `Documents/ClaudeBridge`. The panel has one **Stop / Start**
+button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` exposes `ROOT`,
+`VERSION`, `runs`, `stringify`, `readText`, `writeText`, `log` (shown in the panel and
+`bridge.log`), `useFolder` and `info()` to scripts.
 
-## Finding / starting it
+## Installing / finding it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
   don't know ROOT, ask the user what the status line says. Old `done/` + `outbox/` files show
   what earlier sessions did.
-- Install once: File › Scripts › Install ScriptUI Panel… › `ClaudeBridge.jsx` (it lands in
-  `%APPDATA%\Adobe\After Effects\<ver>\Scripts\ScriptUI Panels\`; copying it there by hand works
-  too, no admin needed), restart AE, Window › ClaudeBridge.jsx, dock it. A docked panel reopens
-  with the workspace. The folder is per AE version, so a new AE version needs it again *(unverified)*.
-  After changing the installed file, closing and reopening the panel from the Window menu loads
-  it (no restart).
-- No minimize button is possible for the panel: AE draws panel frames (floating or docked) with
-  only a close button, and `win.size = …` on a Panel is ignored. To tuck it away, dock it as a
-  tab. Palettes are Windows tool windows, so `minimizeButton: true` shows nothing there; a
-  `new Window("window", …, {minimizeButton: true})` is a normal window owned by AE with a
-  minimize button and its own taskbar button, and `show()` doesn't block.
-- Or once: File › Scripts › Run Script File… › `ClaudeBridge.jsx`. Either way needs Preferences ›
-  Scripting & Expressions › *Allow Scripts to Write Files and Access Network*.
-- You can't start it yourself: `AfterFX.exe -r <ClaudeBridge.jsx>` against an already running AE
-  2026 did nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
+- Install (verified AE 2026, Windows): `scripts/install.ps1` self-signs `panel/` with
+  `ZXPSignCmd.exe` from `-SigningDir` (default `D:\WORK\Claude\premiere-bridge-signing`, shared
+  with the Premiere bridge; CEP 12 refuses unsigned panels and ignores PlayerDebugMode), copies it
+  to `%APPDATA%\Adobe\CEP\extensions\com.claude.aebridge`, and removes the old ScriptUI panel
+  (`ClaudeBridge.jsx` in AE's ScriptUI Panels folders) so two bridges never share an inbox.
+  `-ShareTo <dir>` also writes the signed copy colleagues install (they copy that folder into their
+  CEP extensions folder; Mac: `~/Library/Application Support/Adobe/CEP/extensions/`). AE finds new
+  extensions only at start-up: restart, Window › Extensions › Claude Bridge, dock it.
+- Every edit to a panel file breaks the signature: re-run `install.ps1`. The panel loads
+  `host.jsx` each time it opens (and again whenever it finds the bridge code missing), so a new
+  `host.jsx` takes effect when the user closes and reopens the panel; a bridge script can also
+  `$.evalFile(Folder.userData.fsName + "/Adobe/CEP/extensions/com.claude.aebridge/host.jsx")`
+  (keeps `runs` and the already-run signatures). A changed `index.html` needs the panel reopened.
+- You can't start it yourself: `AfterFX.exe -r <script>` against an already running AE 2026 did
+  nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
+- **AE dialogs don't stop it** (verified 4 Nov 2026): a script sent while Project Settings was
+  open ran within a second. So a script can change things under an open dialog, and the user's
+  OK may then overwrite them; if the user mentions a dialog is open, ask them to close it first.
 - A script that sits in `inbox/` for more than a few seconds means the panel is **stopped**
-  (status reads `Stopped…`: ask the user to press Start) or **closed** (AE itself still reports
-  "Responding"), or listening in another folder (the user may have started a different copy: ask
-  what the status line says). Don't resend; it runs as soon as the bridge is back. After an
+  (status `Stopped…`: ask the user to press Start), **closed** (ask them to open Window ›
+  Extensions › Claude Bridge), busy with an earlier long script, or listening in another folder
+  (ask what the status line says). Don't resend; it runs as soon as the bridge is back. After an
   hour its signature has expired and it is rejected; then send it again.
-- **Diagnosing a stall:** `send.sh`'s timeout message prints the age of `<ROOT>/heartbeat.json`
-  (rewritten every 5 s while the bridge ticks) and the last lines of `<ROOT>/bridge.log` (starts,
-  every script, rejections, Stop/Start clicks, errors). Fresh heartbeat + `paused: true` = user
-  pressed Stop. Stale heartbeat = AE stopped calling the bridge: the log says why if the panel
-  stopped itself ("panel controls stopped working": ask the user to reopen it); `orphan.txt` in
-  ROOT means the script engine was wiped (ask the user to reopen the panel). A stale heartbeat with
-  neither means AE itself isn't idling (open dialog, render, preview): ask what AE is doing, and
-  report the times to the user. Seen 30–31 Oct 2026: stalls of 3–8 min, then queued scripts all ran
-  at once; cause not yet known. A docked panel collapsed in a stacked group keeps running (verified).
+- **Diagnosing:** `send.sh`'s timeout message prints `<ROOT>/heartbeat.json` (written by the panel
+  every 5 s, independent of AE) and the last lines of `<ROOT>/bridge.log` (loads, every script,
+  rejections, Stop/Start, panel open/close; trimmed to 7 days). Stale = the panel or AE is closed.
+  Fresh + `paused: true` = the user pressed Stop. Fresh + `aeWaiting` > a few s = AE hasn't answered
+  the panel's call for that long: a long script (the log shows `run X` without its `OK`/`FAIL`)
+  or AE is busy or hung. `lastAeAnswer` = when AE last finished a call.
+- **Quitting AE** (verified 4 Nov 2026): with a big EXR-heavy project AE showed "Not
+  Responding" for 12 s to 2 min while quitting, then closed by itself, with no bridge call pending.
+  Tell the user to wait it out rather than kill it. AE 26.5 never sent CEP's
+  `ApplicationBeforeQuit` event to the panel; its page unloads about a second before AE exits.
 - Wrong folder: a script calling `$.global.ClaudeBridge.useFolder(path)` switches and remembers it.
   It returns `""` or the reason (it refuses AE's Scripts folders and unwritable folders). The
   calling script's own JSON still lands in the folder it came from.
-- Loading a changed `ClaudeBridge.jsx` into a running AE without the user: a script that runs
-  `var old = $.global.ClaudeBridge.win; $.evalFile(file)`. The new panel cancels the old task and
-  opens a window. Close `old` from a delayed `app.scheduleTask("…close()…", 2000, false)`, never
-  directly: the old panel is still inside its tick and writes to its own log after your script
-  returns *(closing via `win` unverified)*. Don't use `Window.find("palette", "Claude Bridge")`
-  for this: it returned an already-closed palette and left the visible one open. A palette started
-  this way once stopped on its own within ~5 min (cause unknown), so prefer asking the user to
-  close and reopen the panel (Window › ClaudeBridge.jsx loads the new file, no restart needed).
-- The bridge keeps running while AE is in the background (a ping answered in 0.6 s with the
-  Claude app in front).
+- Why not a ScriptUI panel (the bridge was one until 4 Nov 2026, verified): an
+  `app.scheduleTask` timer that fires while any AE dialog is open is dropped for good, silently, so
+  the bridge died at the first Project Settings / Save / warning dialog while still showing
+  "Listening…"; its buttons don't respond while a dialog waits; and AE re-running a ScriptUI panel
+  with a dialog open fails with "Unable to execute script at line N … Cannot run a script while a
+  modal dialog is waiting for response". Keep that in mind for any ScriptUI tool you build.
 
 ## Sending scripts — only through send.sh
 `scripts/send.sh NAME [timeout]` (env `STAGE` = folder with `NAME.jsx`, `BRIDGE` = ROOT) signs the
 script, copies it in under a non-`.jsx` name, renames it and waits for the JSON. Never write into
-`inbox/` yourself: the panel would reject it as unsigned, and the bridge polls every second, so a
-file grabbed while still being written fails too. `send.sh` needs `openssl` (Git for Windows and
+`inbox/` yourself: the panel would reject it as unsigned, and the panel checks the inbox every
+second, so a file grabbed while still being written fails too. `send.sh` needs `openssl` (Git for Windows and
 macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 
 ## Traps hit in practice

@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Claude Bridge</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; padding: 6px;
+    background: #232323; color: #d4d4d4; font: 12px/1.4 "Segoe UI", system-ui, sans-serif;
+  }
+  .row { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  #status { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #status.off { color: #e0a040; }
+  #status.err { color: #e06a6a; }
+  button {
+    flex: none; min-width: 64px; background: #3a3a3a; color: #dddddd; border: 1px solid #555555;
+    border-radius: 3px; padding: 3px 10px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #474747; }
+  #log {
+    flex: 1; min-height: 0; overflow: auto; background: #1b1b1b; border: 1px solid #333333;
+    border-radius: 3px; padding: 4px 6px; font: 11px/1.45 Consolas, monospace; white-space: pre-wrap;
+  }
+  .fail { color: #e88888; }
+</style>
+</head>
+<body>
+  <div class="row"><button id="run">Stop</button><div id="status">Starting…</div></div>
+  <div id="log"></div>
+<script>
+/*  Claude Bridge panel. Its own timer (Node, once a second) watches <bridge folder>/inbox and
+    writes heartbeat.json; it calls into After Effects (ClaudeBridge.tick() in host.jsx) only when
+    a script is waiting. An AE dialog can't cancel this timer, and AE is left alone while idle:
+    a call pending while AE quits can deadlock AE's shutdown (seen 4 Nov 2026), so the panel also
+    stops calling once AE announces it is quitting. */
+(function () {
+  "use strict";
+  var cep = window.__adobe_cep__;
+  var nodeRequire = (window.cep_node && window.cep_node.require) || window.require;
+  var POLL_MS = 1000, BEAT_MS = 5000, VERSION = "2.1.0";
+  var fs = null, path = null;
+  var root = "", loaded = false, paused = false, quitting = false, busy = false, busySince = 0;
+  var runs = 0, lastBeat = 0, lastAnswer = 0, lastProblem = "";
+  var statusEl = document.getElementById("status"), logEl = document.getElementById("log"), runBtn = document.getElementById("run");
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function stamp(d) {
+    d = d || new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+  function log(text, cls) {
+    var line = document.createElement("div");
+    line.textContent = stamp().substring(11) + "  " + text;
+    if (cls) line.className = cls;
+    logEl.insertBefore(line, logEl.firstChild);
+    while (logEl.childNodes.length > 300) logEl.removeChild(logEl.lastChild);
+  }
+  function fileLog(text) {   // same line format as host.jsx, so bridge.log trimming keeps working
+    if (!root || !fs) return;
+    try { fs.appendFileSync(path.join(root, "bridge.log"), stamp() + "  [panel]  " + text + "\n"); } catch (e) {}
+  }
+  function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls || ""; statusEl.title = text; }
+  function showIdle() {
+    if (quitting) return setStatus("After Effects is quitting: the bridge has stopped", "off");
+    var inbox = root ? path.join(root, "inbox") : "…";
+    if (paused) setStatus("Stopped (inbox: " + inbox + ")", "off");
+    else setStatus("Listening… (inbox: " + inbox + ")" + (runs ? "  ·  " + runs + " run" : ""));
+  }
+  function problem(text) {   // log each distinct problem once, keep showing it in the status line
+    setStatus(text, "off");
+    if (text !== lastProblem) { log(text, "fail"); lastProblem = text; }
+  }
+  function parse(res) { try { return JSON.parse(res); } catch (e) { return null; } }
+  function extensionDir() {
+    var p = decodeURI(cep.getSystemPath("extension")).replace(/^file:\/\//, "");
+    return /^\/[A-Za-z]:/.test(p) ? p.substring(1) : p;   // Windows comes as /C:/...
+  }
+
+  // Heartbeat, written here so it needs nothing from AE. aeWaiting: seconds a call into AE has
+  // been pending (0 = none); a large value means AE isn't answering.
+  function beat() {
+    if (!root) return;
+    lastBeat = Date.now();
+    var hb = { time: stamp(), epoch: Math.floor(lastBeat / 1000), panel: VERSION, paused: paused, quitting: quitting,
+      runs: runs, aeWaiting: busy ? Math.round((lastBeat - busySince) / 1000) : 0,
+      lastAeAnswer: lastAnswer ? stamp(new Date(lastAnswer)) : null };
+    try { fs.writeFileSync(path.join(root, "heartbeat.json"), JSON.stringify(hb)); } catch (e) {}
+  }
+  function inboxHasScript() {
+    try { return fs.readdirSync(path.join(root, "inbox")).some(function (n) { return /\.jsx$/i.test(n); }); }
+    catch (e) { return false; }
+  }
+
+  function callAE(script, done) {
+    busy = true; busySince = Date.now();
+    cep.evalScript(script, function (res) { busy = false; lastAnswer = Date.now(); done(res); });
+  }
+  // (Re)loads host.jsx; it keeps the run count and the already-run signatures across reloads.
+  function loadHost() {
+    callAE("$.evalFile(" + JSON.stringify(extensionDir() + "/host.jsx") + "); ClaudeBridge.info()", function (res) {
+      var info = parse(res);
+      if (!info) return problem("Waiting for After Effects to load the bridge…");
+      root = info.root; loaded = true; lastProblem = "";
+      log("Bridge " + info.version + " ready in " + info.root + " – signed scripts only" + (info.keyExists ? "" : " (no key yet: send.sh creates it)"));
+      fileLog("panel " + VERSION + " opened");
+      showIdle(); beat();
+    });
+  }
+  function runInbox() {
+    callAE('typeof ClaudeBridge == "object" && ClaudeBridge.tick ? ClaudeBridge.tick() : "NOT_LOADED"', function (res) {
+      if (res === "NOT_LOADED") { loaded = false; return; }
+      var r = parse(res);
+      if (!r) return problem("After Effects didn't take the script (" + res + "); trying again");
+      if (lastProblem) { log("After Effects is answering again"); lastProblem = ""; }
+      root = r.root; runs = r.runs;
+      for (var i = 0; i < r.messages.length; i++) {
+        var m = r.messages[i];
+        log(m, /^(FAIL|REJECTED|Bridge error)/.test(m) ? "fail" : "");
+      }
+      showIdle();
+    });
+  }
+
+  function loop() {
+    if (!quitting) {
+      if (Date.now() - lastBeat >= BEAT_MS) beat();
+      if (busy) {
+        var s = Math.round((Date.now() - busySince) / 1000);
+        if (s >= 3) setStatus("Waiting for After Effects… " + s + " s" + (loaded ? " (running a script)" : ""), "off");
+      } else if (!loaded) {
+        loadHost();
+      } else if (!paused && inboxHasScript()) {
+        runInbox();
+      }
+    }
+    setTimeout(loop, POLL_MS);
+  }
+
+  function stopCalling(why) {
+    if (quitting) return;
+    quitting = true;
+    fileLog(why);
+    beat(); showIdle();
+  }
+
+  runBtn.onclick = function () {
+    paused = !paused;
+    runBtn.textContent = paused ? "Start" : "Stop";
+    log(paused ? "Stopped" : "Started");
+    fileLog(paused ? "Stopped" : "Started");
+    beat(); showIdle();
+  };
+
+  if (!cep) { setStatus("Not running inside After Effects (no CEP).", "err"); return; }
+  try { fs = nodeRequire("fs"); path = nodeRequire("path"); }
+  catch (e) { setStatus("Node.js is off in this panel (manifest needs --enable-nodejs).", "err"); return; }
+  try {
+    cep.addEventListener("com.adobe.csxs.events.ApplicationBeforeQuit", function () { stopCalling("After Effects is quitting: panel stops calling it"); });
+  } catch (e) {}
+  window.addEventListener("beforeunload", function () { stopCalling("panel closed"); });
+  loop();
+})();
+</script>
+</body>
+</html>

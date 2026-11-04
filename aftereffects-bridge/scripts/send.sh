@@ -23,11 +23,13 @@ if [ ! -f "$BRIDGE/outbox/$n.json" ]; then
   hb="$BRIDGE/heartbeat.json"
   if [ -f "$hb" ]; then
     ep=$(sed -n 's/.*"epoch":\([0-9]*\).*/\1/p' "$hb")
-    echo "heartbeat $(( $(date +%s) - ${ep:-0} )) s old (fresh is under 10 s; stale means AE isn't calling the bridge): $(cat "$hb")"
+    echo "heartbeat $(( $(date +%s) - ${ep:-0} )) s old: $(cat "$hb")"
+    echo "(written by the panel itself. Stale = the Claude Bridge panel or AE is closed. Fresh + paused:true ="
+    echo " Stop was pressed. Fresh + aeWaiting over a few s = AE hasn't answered the panel's call for that"
+    echo " long: a long script (the log shows 'run X' without its OK/FAIL) or AE is hung)"
   else
-    echo "no heartbeat.json: the panel is closed, or older than this send.sh"
+    echo "no heartbeat.json: the Claude Bridge panel (Window > Extensions) has never run in this folder"
   fi
-  [ -f "$BRIDGE/orphan.txt" ] && echo "orphan.txt: $(cat "$BRIDGE/orphan.txt")"
   [ -f "$BRIDGE/bridge.log" ] && { echo "last lines of bridge.log:"; tail -n 8 "$BRIDGE/bridge.log"; }
   exit 1
 fi
