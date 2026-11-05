@@ -125,6 +125,14 @@ In C4D: Extensions → Socket Server Plugin → Start Server. After a Claude res
   last word); `GetMg()` on objects inside them is world space. 20 clones × 841 frames took 7 s.
   Check against a frame with `render_preview_image(renderer="hardware")` (2.5 s) when Redshift is
   slow; RS lights inside clones made a Redshift preview sit at 0 % for 70 s.
+- **Python Generator outputs** (verified 2026.4): clones of scene objects (`GetClone`) and nested
+  generators (Extrude + Text spline) placed in the returned hierarchy render in Redshift; their
+  caches only exist at render time, so `GetCache()` on them from a script returns None. Turn
+  `OPYTHON_OPTIMIZE` off and cache by your own signature (include doc time for animation).
+- Extrude in 2026: depth is `EXTRUDEOBJECT_EXTRUSIONOFFSET` (default **100 cm**);
+  `EXTRUDEOBJECT_MOVE` is ignored — a "flat" text extrude needs the offset set near 0.
+- Text spline font from Python: `bc = c4d.bitmaps.GeClipMap.GetFontDescription("IBMPlexMono",
+  c4d.GE_FONT_NAME_POSTSCRIPT)`; `fd = c4d.FontData(); fd.SetFont(bc)`; `txt[c4d.PRIM_TEXT_FONT] = fd`.
 
 ## Testing without touching the user's project (verified)
 - For import/attribute questions, work in a throwaway `c4d.documents.BaseDocument()` (MergeDocument
