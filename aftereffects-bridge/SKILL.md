@@ -121,6 +121,11 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 - In a 32-bpc project (working space None) the PNGs come out 16-bit RGBA and look far darker than
   AE's viewer; lifting with gamma 2.2 (`255*(v/255)**(1/2.2)`) made them readable (cause unverified).
   UI precomps with transparency also need compositing over black before viewing.
+- In a 32-bpc OCIO/ACEScg project they came out **8-bit** RGBA, also far darker than the viewer, even
+  for a comp ending in an OCIO Display Transform. A comp of **raw linear EXRs** (no display transform)
+  puts a night sky on codes 0–2, so the gamma lift shows hard ovals and arcs that are pure 8-bit
+  rounding, not in the footage. Check the code values (`np.unique`) before reporting banding, and
+  judge gradients in the graded comp, not a raw layout comp.
 - Contact sheets: Pillow (`uv run --with pillow python -I sheet.py …`) worked. Windows ffmpeg 7.1
   segfaulted / heap-crashed on `color`+`overlay`+`vstack` graphs fed with these rgba64 PNGs, and
   `drawtext` fails without a fontconfig file — don't bother.
