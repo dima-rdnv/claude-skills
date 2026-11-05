@@ -81,6 +81,12 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   segments in Capsules mode. Camera-only look: `[2999]` Override on, 2001–2013 off.
 - Sub-pixel curves look like grain in `render_preview_image(quality="preview")` (denoised); judge
   them with `quality="final"`.
+- **RS Camera object** (type 1057516, not `IsInstanceOf(c4d.Ocamera)`): `[500]` Focal Length (mm),
+  `[7002]` Sensor Size (mm, Vector w/h), `[7005]` Fit (0 Fill-Crop, 1 Horizontal, 2 Vertical,
+  3 Overscan), `[7022]` Zoom (focal × zoom), `[7012]` Shift. Looks down +Z like a C4D camera; a
+  pinhole projection with focal and the horizontal aperture (sensor.x for Fit Horizontal) matched
+  the render to 1 px. Replace a standard camera: copy Mg, focal, aperture → `[500]`, `[7002]`,
+  then set it on the BaseDraw and the Main take.
 - **Hair-thin lines (~1 px)**: 1 px at distance z is z · aperture / (focal · width_px). Sweeps with a
   0.018–0.02 cm square profile at 250–490 cm (100 mm, 36 mm gate, 1920 wide) rendered as crisp
   ~1 px lines; emission-only weight 6–8 keeps them bright after anti-aliasing (preview quality).
