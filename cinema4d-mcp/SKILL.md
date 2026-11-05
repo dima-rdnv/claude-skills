@@ -45,6 +45,27 @@ socket plugin described below. Notes:
   save path with `$prj` turns spaces in the scene name into underscores and creates that folder.
   Render Queue from Python: `br = c4d.documents.GetBatchRender()`, `br.AddFile(path, 0)` puts a job
   on top, `br.SetRendering(c4d.BR_START)`; status 1006 = queued, 1004 = error (others' jobs stay).
+- **After a C4D upgrade (2026.4 → 2027.0, verified)** the new version's MCP adapter was not listening
+  (nothing on 127.0.0.1:5556) — check the port before trying tools; the user has to switch it on
+  again in the new version. Renders can continue without it through the bundled command-line renderer,
+  which runs next to the open GUI:
+  `"C:/Program Files/Maxon Cinema 4D 2027/Commandline.exe" g_licenseModel=LICENSEMODEL::MAXONAPP
+  -render "scene.c4d" -frame 48 242 -oimage "D:\out\Name_"` (stdin from /dev/null, log to a file,
+  run in the background). It keeps the scene's format/alpha (RGBA float32 EXR) and names frames
+  `Name_0048.exr`; the log ends each frame with "Rendering successful: N sec." Before continuing a
+  sequence across versions, render one already-finished frame to a scratch folder and diff it: a
+  Redshift line scene came out bit-identical in 2027.0 vs 2026.4.
+- **Changing a scene with no MCP** (verified 2027.0): `c4dpy.exe g_licenseModel=LICENSEMODEL::MAXONAPP
+  script.py …` can `LoadDocument(path, SCENEFILTER_OBJECTS | SCENEFILTER_MATERIALS)`, set a Python
+  Generator's user data by name (`for did, bc in op.GetUserDataContainer(): bc[c4d.DESC_NAME]`),
+  and `SaveDocument(doc, copy, SAVEDOCUMENTFLAGS_DONTADDTORECENTLIST, FORMAT_C4DEXPORT)` to a
+  scratch copy; render settings and links survive, and a Commandline render of the copy matched the
+  original pixel for pixel outside the changed elements. Don't save over a scene the user has open
+  in the GUI — their next save silently overwrites it; give them the values to type instead.
+  Which document is in front shows in the window title: `tasklist //V //FI "IMAGENAME eq Cinema 4D.exe"`
+  → `Cinema 4D 2027.0.0 - [02 Satellite Data Flow.c4d] - Main`. `LoadDocument` returns None (no
+  error) for a missing path — users rename scenes (here "Ship Data Flow.c4d" → "02 Ship Data
+  Flow.c4d"), so list the folder first; a renamed scene also renames its `$prj` output folder.
 - ACEScg EXR like the user's renders: RenderData Format 1016606 (OpenEXR), `[5077]` Depth 2 (32-bit),
   `[5036]` Alpha on, `[5038]` Straight off (premultiplied), `[5219]` Bake View Transform off,
   `[28507]` profile Linear. Setting `RDATA_FORMATDEPTH = RDATA_FORMATDEPTH_16` on it raised

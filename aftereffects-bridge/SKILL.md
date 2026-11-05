@@ -152,6 +152,10 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 - A new version of a render already in comps: `footageItem.replaceWithSequence(new File(".../x.0000.exr"),
   false)` swaps the files under the same item; every comp layer, effect and timing stays. Re-set
   `mainSource.conformFrameRate` afterwards.
+- To keep the previous version for A/B (re-render into a new folder, verified 5 Nov 2026): import the
+  new sequence as its own item, copy the interpretation as below, check width/height match, then
+  `layer.replaceSource(newItem, false)` — the layer keeps its anchor/position/scale/start; the old item
+  stays in the project with `usedIn.length === 0`, so the user can swap back with Alt-drag.
 - Footage colour management (input colour space) is not exposed to scripting (`mainSource.reflect`
   shows only alpha / premul). Copy it from a footage item the user set up: deselect all items, select
   that one, `app.executeCommand(app.findMenuCommandId("Remember Interpretation"))` (2254), select the new
