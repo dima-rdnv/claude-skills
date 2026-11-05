@@ -92,8 +92,8 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   that looks for comps by name; the unsaved state of the previous session is gone. Seen 4 Nov 2026:
   a fresh panel ran queued scripts against an empty Untitled project, then the heartbeat stalled
   until the user had the real project open and AE idle.
-- ExtendScript is ES3: unquoted `in` / `out` as object keys fail with "SyntaxError: Illegal use of
-  reserved word" — write `{"in": L.inPoint, "out": L.outPoint}`.
+- ExtendScript is ES3: unquoted `in` / `out` / `native` (any ES3 reserved word) as object keys fail
+  with "SyntaxError: Illegal use of reserved word" — write `{"in": L.inPoint, "native": …}`.
 
 ## Cinema 4D → AE 3D data (verified 4 Nov 2026, to 0.04 px)
 - Positions: AE = `[W/2 + x·s, H/2 − y·s, z·s]` (C4D cm, s = compWidth / C4D render width; C4D origin
@@ -155,7 +155,14 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 - Footage colour management (input colour space) is not exposed to scripting (`mainSource.reflect`
   shows only alpha / premul). Copy it from a footage item the user set up: deselect all items, select
   that one, `app.executeCommand(app.findMenuCommandId("Remember Interpretation"))` (2254), select the new
-  ones, `"Apply Interpretation"` (2255). It also copies alpha and frame-rate interpretation.
+  ones, `"Apply Interpretation"` (2255). It also copies alpha and frame-rate interpretation, so
+  re-set `conformFrameRate` and `alphaMode` (EXR: `AlphaMode.PREMULTIPLIED`) after applying.
+- New EXR sequence (verified 5 Nov 2026, ACEScg 16 bpc project): `io = new ImportOptions(new
+  File(first.exr)); io.sequence = true; p.importFile(io)` gives one item named `x_[0000-0242].exr`.
+- **List the target comp's layers right before adding**: the user may have put their own plate in
+  meanwhile (here a `.mov` with OCIO/Adj above it). Take the plate layer's anchor/position/scale for
+  the CG layer and `moveBefore(plate)` instead of adding a second plate. A `.mov` reporting 30.124 fps
+  to OpenCV was interpreted by AE at native 30.
 - `layer.copyToComp(comp)` keeps the source layer's index rather than landing on top: copying two
   adjustment layers came out in the wrong order. List the order afterwards and `moveToBeginning()`.
 - A multilayer EXR imported as `ImportAsType.FOOTAGE` is one item showing the main RGBA; extra layers
