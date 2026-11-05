@@ -72,6 +72,15 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   a `rsmathmul(t, t)` in the same spot worked.
 - Many RS point lights inside cloned rigs (66 here) made a 960×540 preview crawl (~15 % after 80 s);
   with them off it took 8 s.
+- **Splines as Redshift curves** (verified 2026.4, many hundreds of lines in ~6 s at 1920 final):
+  RS Object tag on the spline: `[9000]` Mode (0 Off, 1 Hair Strands, 32 Boxes, 33 Cylinders,
+  34 Capsules, 35 Cones, 36 Strips), `[9001]` Thickness (cm), `[9002]` Scale = `c4d.SplineData`
+  thickness along each curve (a new SplineData already holds 2 knots: delete them before
+  `InsertKnot(0, 1)`, `InsertKnot(1, 0)` for a taper). Multi-segment splines work (one curve per
+  segment); tags put on splines built inside a Python Generator's cache are honoured. Dots = 2-point
+  segments in Capsules mode. Camera-only look: `[2999]` Override on, 2001–2013 off.
+- Sub-pixel curves look like grain in `render_preview_image(quality="preview")` (denoised); judge
+  them with `quality="final"`.
 - **Hair-thin lines (~1 px)**: 1 px at distance z is z · aperture / (focal · width_px). Sweeps with a
   0.018–0.02 cm square profile at 250–490 cm (100 mm, 36 mm gate, 1920 wide) rendered as crisp
   ~1 px lines; emission-only weight 6–8 keeps them bright after anti-aliasing (preview quality).
