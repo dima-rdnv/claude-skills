@@ -204,6 +204,21 @@ description: Cinema 4D Motion Tracker through Python/MCP - reading 2D tracks and
   camera follows it, so its points are wrongly triangulated. Scale from what is static relative to
   where you'll place things; say so when references disagree.
 
+## Object track instead of a camera solve (verified 5 Nov 2026, AI ship/satellite clips)
+When only one thing must stick to the plate (an emitter on a ship or a satellite) and the
+footage has no reliable parallax (waves, clouds, generated video): track the object in 2D,
+outside C4D, and drive a null — no Motion Tracker solve.
+- OpenCV: features only on the object (ROI boxes above the waterline; for a dark object on bright
+  ground also a mask of pixels darker than ~50, dilated 9 px), LK with a forward-backward check
+  (< 0.6 px), `estimateAffinePartial2D` (RANSAC 1 px) per frame, accumulate → move/scale/roll.
+  Anchor a thin feature (an antenna tip) via a solid one nearby (template-matched each frame,
+  template warped by the accumulated scale/roll) plus the fixed offset rotated and scaled.
+- Static camera at the origin; anchor null keyed per frame: depth z = z0 / scale, x = (px − W/2)/k,
+  y = (H/2 − py)/k with k = W · focal / aperture / z. **Bank = +image rotation** (OpenCV degrees,
+  y down) — the opposite sign counter-rotates. Projected back, the anchor matched the 2D track to
+  0.006 px; widths stay right because the rig sizes lines in pixels from the camera distance.
+- Render the CG with alpha at the plate size and frame range: it drops onto the plate 1:1 in AE.
+
 ## Footage background for a new camera (viewport only)
 `Mmaterial` with luminance = `Xbitmap` (BITMAPSHADER_FILENAME = the tracker's footage path, then
 `CallButton(shader, c4d.BITMAPSHADER_CALCULATE)` sets movie timing/fps), on an `Obackground` with a
