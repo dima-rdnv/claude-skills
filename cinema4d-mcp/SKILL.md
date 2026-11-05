@@ -40,6 +40,17 @@ socket plugin described below. Notes:
   only `td.GetMainTake().SetCamera(td, cam)` changed the render while the viewport camera stayed put.
   It runs on its own thread (~40 s for a Redshift preview at 960×540): call again to collect.
   After `stop_render` the next call can return "cancelled" once — just call it again.
+- **Rendering to disk** (verified 2026.4): `start_render(output_path=…exr)` wrote a 3-channel EXR
+  (alpha dropped); without `output_path` it uses the RenderData save settings and wrote RGBA. A
+  save path with `$prj` turns spaces in the scene name into underscores and creates that folder.
+  Render Queue from Python: `br = c4d.documents.GetBatchRender()`, `br.AddFile(path, 0)` puts a job
+  on top, `br.SetRendering(c4d.BR_START)`; status 1006 = queued, 1004 = error (others' jobs stay).
+- ACEScg EXR like the user's renders: RenderData Format 1016606 (OpenEXR), `[5077]` Depth 2 (32-bit),
+  `[5036]` Alpha on, `[5038]` Straight off (premultiplied), `[5219]` Bake View Transform off,
+  `[28507]` profile Linear. Setting `RDATA_FORMATDEPTH = RDATA_FORMATDEPTH_16` on it raised
+  "parameter set failed". `doc.GetActiveOcioColorSpacesNames()` → (render, display, view,
+  thumbnail view), e.g. ('ACEScg', 'sRGB', 'ACES 1.0 SDR-video', …); it returned empty strings for a
+  document that wasn't the active one.
 - `c4d.utils.RotAxisToMatrix(axis, a)` turns opposite to the right-hand rule (left-handed space):
   to rotate direction a0 onto a1 with axis = a0 × a1, use −angle. Check `R.MulV(a0)` against a1.
 - The user may switch the active document while you work: for read-only steps find documents by name
