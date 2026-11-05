@@ -229,6 +229,22 @@ Per property: grab every key (`keyTime`, `keyValue`, `keyIn/OutInterpolationType
   + Repeater in a group rotated 45°, clipped by `layer.setTrackMatte(matte, TrackMatteType.ALPHA)`
   (matte `enabled = false`). One "ADBE Fill" effect per layer with its colour linked to the Color
   control tints text and strokes alike.
+- A Point Control exposes fine as an Essential Property; on an instance give it the expression
+  `thisComp.layer("Null").transform.position` and the precomp's text shows that layer's comp X/Y.
+
+## Tracking footage for HUDs outside AE (verified 5 Nov 2026, EXR outro, 267 frames 4K)
+- AE's tracker isn't scriptable; track in Python instead: `os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"`
+  before `import cv2`, read EXRs with `IMREAD_UNCHANGED`, luminance → `L/(1+L)` → gamma → uint8.
+- Candidates = blob centroids at the first frame; `calcOpticalFlowPyrLK` (31 px window, 4 levels)
+  forward + backward, drop a point when the forward-backward error > 0.8 px. Then score per track
+  (bright outline under the point, NCC vs the first-frame patch) — a smooth track can still sit on
+  empty space after a sparkle fades, or between two icons merged into one blob. Check by eye with
+  crop sheets at intervals.
+- Re-centre with template matching (icon from frame 1, ±16 px around the LK prediction, sub-pixel
+  peak, slow template update when score > 0.85), then Savitzky–Golay 7/2 (jitter 0.4 → 0.2 px).
+- Prove the footage→comp mapping by rendering the comp itself with the HUDs off and circling the
+  track points. `saveFrameToPng` is async, so toggle layers on a `comp.duplicate()`, render that, and
+  delete it in a later script — never restore the user's layer switches in `finally` right after.
 
 ## Keeping this skill current
 After a session that used the bridge, add only what was tested in a real project (mark the rest
