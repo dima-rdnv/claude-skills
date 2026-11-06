@@ -12,7 +12,15 @@
   yet). It keeps the scene's format/alpha (RGBA float32 EXR) and names frames `Name_0048.exr`; the log
   ends each frame with "Rendering successful: N sec." Before continuing a sequence across versions,
   render one finished frame to a scratch folder and diff it: a Redshift line scene came out
-  bit-identical in 2027.0 vs 2026.4.
+  bit-identical in 2027.0 vs 2026.4. Also verified: `-frame 0 240 120` (start end step) renders
+  three frames; `-oresolution 1920 1080` renders at that size (good for quick motion tests).
+- **"Rendering failed: Out of memory" from Commandline** (verified 2027.0) while the GUI was
+  rendering a sequence with Redshift: the GUI held ~23 of 24 GB VRAM and the Commandline Redshift
+  log said "199 MB was available for Redshift". The GUI's log is
+  `C:\ProgramData\Redshift\Log\Log.Latest.0\log.html` (Application Path `Cinema 4D.exe`), the
+  Commandline run gets its own `Log.Latest.N` (Application Path `Commandline.exe`). A new
+  "Rendering blocks… (resolution …)" line every few seconds in the GUI log = the user is rendering:
+  wait (watch the output folder fill), then retry — it worked as soon as their render ended.
 - **Changing a scene with no MCP** (verified 2027.0): `c4dpy.exe g_licenseModel=LICENSEMODEL::MAXONAPP
   script.py …` can `LoadDocument(path, SCENEFILTER_OBJECTS | SCENEFILTER_MATERIALS)`, set a Python
   Generator's user data by name (`for did, bc in op.GetUserDataContainer(): bc[c4d.DESC_NAME]`),

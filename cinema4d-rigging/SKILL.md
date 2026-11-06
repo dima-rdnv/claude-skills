@@ -53,11 +53,18 @@ def val(d):
     except Exception: return None              # groups have no value (reading raises)
 tail = [(d, bc, val(d)) for d, bc in entries[k + 1:]]
 for d, bc, v in reversed(tail): op.RemoveUserData(d)
-op.SetUserDataContainer(new_did, new_bc); op[new_did] = value     # new_bc: copy a sibling's bc
+op.SetUserDataContainer(new_did, new_bc); op[new_did] = value     # new_bc: copy a sibling's bc; new_did: see below
 for d, bc, v in tail:                          # same IDs, so the driver keeps working
     op.SetUserDataContainer(d, bc)
     if v is not None: op[d] = v                # links (folders) restore too
 ```
+- `new_did` must be an ID that was never in the list: build it from the highest ID read *before*
+  the removal, `c4d.DescID(c4d.DescLevel(c4d.ID_USERDATA, c4d.DTYPE_SUBCONTAINER, 0),
+  c4d.DescLevel(max_id + 1, dtype, 0))`. `AddUserData` after the removal reuses the lowest freed ID,
+  and restoring the tail on its old IDs then silently overwrites the new entry (verified 2027.0).
+- Setting a value above an entry's `DESC_MAX` from Python clamps it without an error (6, 8 and 10
+  built identical geometry with max 5): raise `DESC_MAX` with `SetUserDataContainer` first.
+- `bc[c4d.DESC_PARENTGROUP]` is None for top-level groups — guard before `.GetDepth()`.
 - Removing an entry also drops its animation track and take overrides. Check
   `op.GetCTracks()` and the takes first, and only move entries that have none.
 - IDs may already be taken by fields the user added (e.g. a stray "Data" entry). Check the ID list

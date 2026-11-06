@@ -124,11 +124,8 @@ stop, tell the user (restart needed) and don't retry; (3) while anything renders
 outside (output folder, RS log), never fire tool calls into the busy app; (4) never `BR_STOP` from
 Python, stop the queue in its window; (5) test frames go through `Commandline.exe` (see
 `references/upgrading-c4d.md`), which runs outside the GUI and rendered Redshift fine in 2027.0.
-- Auth from a shell: plain HTTP to :5556 gets 401. Run Maxon's relay with its token file instead of
-  handling the token: `python <C4D>/resource/mxn_plugins/mcp_adapter/scripts/stdio_relay.py
-  http://127.0.0.1:5556/mcp --token-file %APPDATA%/Maxon/Maxon Cinema 4D 2027_<id>/prefs/mcp/token`,
-  newline JSON-RPC: initialize → notifications/initialized → tools/call. An `exec_python` reply that
-  times out after 30 s ("adapter dispatch timed out") keeps running in C4D — never resend.
+- From a shell (e.g. when this session's cinema4d tools disconnected): Maxon's stdio relay with
+  the token file — recipe and reply format in `references/shell-relay.md`.
 
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash
@@ -202,6 +199,10 @@ c4d.documents.SaveDocument(xdoc, out, c4d.SAVEDOCUMENTFLAGS_DONTADDTORECENTLIST,
 - Wrap scene edits in `doc.StartUndo() / AddUndo(...) / EndUndo()` so the user can ⌘Z; `c4d.EventAdd()` after.
   Don't save their file unless asked.
 - A script that errors midway leaves its earlier edits in place — inspect the scene before retrying.
+- `doc.GetChanged()` is not proof of user edits: your own probe (set a value and restore it, or
+  `SetTime` + `ExecutePasses`) sets it too (verified 2027.0). Before editing a document that reports
+  changes, `LoadDocument` its file and compare user data, point lists, code and the `GetMl()` of
+  objects without tracks (global matrices of animated objects differ only because of the time).
 - Find objects by walking `GetDown()/GetNext()` and matching `GetName()`; toggle an object with
   `op[c4d.ID_BASEOBJECT_GENERATOR_FLAG] = False`. Names repeat (e.g. a hidden and a visible
   "Valve Left 1"): find under the right parent.
