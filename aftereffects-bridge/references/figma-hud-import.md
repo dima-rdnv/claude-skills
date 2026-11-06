@@ -34,6 +34,9 @@
   anchor `[W/2, H/2]`, position `[x0 + W/2, y0 + H/2]` — box corners identical before/after.
 - Expressions that read `thisComp.layer("HUD Controls")` break inside the new comp: replace with
   `comp("<parent comp>").layer("HUD Controls")` (precomp time = parent time with startTime 0).
+  Even when the replacement runs in the same script, AE's banner kept "expression errors: 1 of 3"
+  (one per new precomp) while every expression evaluated fine at every frame from script.
+  Re-applying them (`q.expression = ""; q.expression = ex;`) cleared the banner.
 - Screen-blended layers inside a precomp only blend with what is inside it; set the precomp layer to
   Screen too so dark feed pixels don't cover what's behind.
 
