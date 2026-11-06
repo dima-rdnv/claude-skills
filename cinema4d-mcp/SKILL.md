@@ -278,6 +278,12 @@ br.EnableElement(i, False)                                              # skip a
     frozen, force quit needed). Ask the user to stop renders in the Render Queue window.
   - **Don't loop on `DelFile`** — it did not remove a waiting job. Disable old jobs instead.
   - Watch progress from a shell (output file size/mtime); bridge calls can block while a job loads.
+  - **Queue calls load the scene file on C4D's main thread**: `AddFile`, `GetAllTakeNames`,
+    `GetActiveTakeName`. With a heavy file (65 MB + 25 Alembic particle groups) 24 jobs took ~2 min
+    and a second listing call that asked each job's take froze the UI again ("Not Responding", but
+    reading ~27 MB/s — busy, not dead; wait it out, never kill). Fill a big queue in one call, read
+    back with `GetElement`/`GetElementStatus`/`GetJsonJobs()` only, and warn the user first.
+    `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet`.
 - **Render settings frame rate:** `RDATA_FRAMERATE` is ignored while "Use Project Frame Rate"
   (param id `5023`) is on — set `rd[5023] = False` first, on the parent render settings too (a child
   followed its parent). Use this to render 30 fps from a 60 fps scene.
