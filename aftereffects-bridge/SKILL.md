@@ -3,7 +3,7 @@ name: aftereffects-bridge
 description: Driving Adobe After Effects from Claude without an MCP server, through a file-based ExtendScript bridge (a signed CEP panel that runs signed .jsx files dropped into an inbox folder and writes JSON results). Covers finding and starting the bridge, sending scripts safely, inspecting comps/layers/keys/expressions, rendering preview frames, retiming keyframes to a voice-over, building UI elements (shape/text layers with expression-driven interactions), and verified traps. Use whenever a task touches After Effects / AE / .aep comps.
 ---
 
-# After Effects via the file bridge (verified AE 2026 / 26.5, Windows)
+# After Effects via the file bridge (verified AE 2026 / 26.5, Windows and macOS)
 
 There is no AE MCP server. `panel/` is a CEP extension ("Claude Bridge", Window › Extensions):
 while it is open, `index.html` (Node enabled) checks `<ROOT>/inbox` itself once a second and
@@ -26,6 +26,9 @@ you switch it when the user asks), remembered in AE's settings (`app.settings`, 
 button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` exposes `ROOT`,
 `VERSION`, `runs`, `stringify`, `readText`, `writeText`, `log` (shown in the panel and
 `bridge.log`), `useFolder` and `info()` to scripts.
+
+**On macOS read `references/macos.md` first.** Those notes were verified with the earlier ScriptUI
+panel, not yet with this CEP panel, and `install.ps1` is Windows-only.
 
 ## Installing / finding it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
@@ -171,6 +174,13 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   adjustment layers came out in the wrong order. List the order afterwards and `moveToBeginning()`.
 - A multilayer EXR imported as `ImportAsType.FOOTAGE` is one item showing the main RGBA; extra layers
   (depth, mattes) are read with the EXtractoR effect on a layer of it.
+- On macOS `replaceWithSequence` kept `conformFrameRate` and `alphaMode` too; check them anyway.
+- Movie → another movie: import it, then `layer.replaceSource(newItem, false)` per layer.
+- Dropping time remap: `layer.timeRemapEnabled = false` removes the keys; set `inPoint` / `outPoint`
+  back afterwards. A luma-matte layer of the same clip needs the same swap.
+- Before moving or deleting old render folders, look for **symlinked version folders**
+  (`find -L <dir> -type l` lists broken links): a `…_v003` folder was a symlink to `…_v002`, and moving
+  v002 broke footage the project used. Re-check AE's missing footage afterwards.
 
 ## Inspecting
 - Find comps by name over `app.project.item(i)` (`CompItem`), use ids afterwards (`itemByID`).
@@ -203,6 +213,21 @@ Per property: grab every key (`keyTime`, `keyValue`, `keyIn/OutInterpolationType
   Otherwise a slow drift interpolates across the gap.
 - Easing a key you created: `setTemporalEaseAtKey(k, [new KeyframeEase(0, 50)], [...])` — one
   `KeyframeEase` per dimension (1 for sliders/time remap).
+- **Enabling Time Remap by script puts the end key at value = source duration.** For a precomp that
+  time is past every layer's out point, so a "hold the last frame" extension showed an empty frame.
+  Set the end key to the last frame (`duration - 1/fps`) and extend the out point; the value holds
+  after the last key.
+- Re-cutting an edit to a new VO (verified): per reused layer `startTime += delta` (keys and text
+  animators move with it), then in/out; slow a clip with `layer.stretch` first, then `startTime`
+  (`new_in - (old_in - old_start) * stretch/100`), then in/out; non-linear slow-downs with Time Remap
+  keys (comp-time keys via `setValueAtTime`, add first, remove the old ones). Text layers whose
+  animators animate out keep their own length — a longer out point doesn't keep them on screen.
+- Before moving things, assert each captured layer's name (index → expected prefix) and stop if the
+  comp changed; rename reused layers by the new shot (`F03 | …`) and park unused ones (`enabled =
+  false`, `x unused | …`) instead of deleting.
+- A reused title can end up under opaque footage (`duplicate()` lands right above its original,
+  `layers.add` at index 1): check the stack and `moveBefore` the footage.
+- Save-As: `app.project.save(new File(path))` switches the open project to the new file.
 - Everything a bridge script does is one undo step, so a bad retime is one Ctrl+Z.
 
 ## Building UI elements (verified)

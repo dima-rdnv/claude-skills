@@ -1,5 +1,8 @@
 # Cinema 4D MCP: setup guide (Windows & macOS)
 
+> This guide covers the community plugin. On Cinema 4D 2026.4 and later use Maxon's built-in MCP server
+> instead: Preferences → MCP (see [SKILL.md](SKILL.md)).
+
 These steps connect Claude Desktop to Cinema 4D through
 [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp). They were verified in
 September 2026 with Cinema 4D 2026, server commit `6bab376` and `mcp` 1.30.0, on Windows and on

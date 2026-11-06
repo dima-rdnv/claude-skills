@@ -1,6 +1,6 @@
 ---
 name: cinema4d-rigging
-description: "Build Cinema 4D control rigs via Python/MCP: user data (incl. inserting controls mid-group), keyed controls, Python tag drivers, self-updating dropdowns, spline travel, HUD, procedural splines and meshes. Load with cinema4d-mcp."
+description: "Build and fix Cinema 4D control rigs via Python/MCP: user data, keyed controls, monotone retiming of cycle controls, Python tag drivers, XPresso/tag evaluation-order lag, slider-crank, spline travel, HUD. Load with cinema4d-mcp."
 ---
 
 # Cinema 4D rigs: user data + Python tag driver (verified C4D 2026.1)
@@ -74,6 +74,8 @@ k.SetInterpolation(cv, c4d.CINTERPOLATION_SPLINE)
 ```
 - Two SPLINE keys with default tangents evaluated linearly. Set tangents if you need an ease.
 - Value at any time: `tr.GetValue(doc, basetime)`. The driver uses this for "previous frame" values.
+- Hard cuts in a camera move: a key with `CINTERPOLATION_STEP` holds its value until the next key —
+  put one on the last frame of a shot and the next shot's first value on the cut frame (verified).
 
 ## The Python tag driver
 ```python
@@ -173,11 +175,74 @@ head.SetMg(sh.GetMatrix(u, realoffset=True, smooth=True))   # u 0..1 = fraction 
   through `**kw`: pass it as a plain argument.
 - Long code: write it to a file, `py_compile` it, and `open(path).read()` it inside `exec_python`
   (the Maxon adapter reads local files), instead of pasting it into the call.
+## Evaluation order: one-frame lag between tags (verified)
+Symptom: a part driven by XPresso from another object's **global** position trails by one frame,
+and after a timeline jump it is far off (an Alembic export then has a bad first frame).
+- Test: `SetTime(t)`, one `ExecutePasses`, read; a second `ExecutePasses`, read again. Different
+  values = lag. Test after jumps (0 → 300 → 100), not only sequential frames.
+- Cause seen: XPresso (Expression 0) read the end of a con-rod whose parent is aimed by a Target
+  tag at Expression 10 — the XPresso ran before the aim was updated.
+- Fix: move only the dependent link (read global pos → write) into a **second XPresso tag** with a
+  priority above the tag it depends on (here 20). Ports by DescID:
+```python
+gy = c4d.DescID(c4d.DescLevel(c4d.ID_BASEOBJECT_GLOBAL_POSITION, c4d.DTYPE_VECTOR, 0),
+                c4d.DescLevel(c4d.VECTOR_Y, c4d.DTYPE_REAL, 0))
+nm = tag.GetNodeMaster(); root = nm.GetRoot()
+n = nm.CreateNode(root, c4d.ID_OPERATOR_OBJECT, None, 100, 100); n[c4d.GV_OBJECT_OBJECT_ID] = src
+out = n.AddPort(c4d.GV_PORT_OUTPUT, gy)          # then the same for the target node (GV_PORT_INPUT)
+out.Connect(inp); nm.Message(c4d.MSG_UPDATE)    # remove the old nodes only after Connect() is True
+```
+- Priority on any tag: `pd = tag[c4d.EXPRESSION_PRIORITY]; pd.SetPriorityValue(c4d.PRIORITYVALUE_MODE, 2)`
+  (2 = Expression), `PRIORITYVALUE_PRIORITY`, write it back.
+
+## Before retiming an existing rig, look for baked leftovers (verified)
+Rigs prepared for an earlier bake can still contain baked helper copies: nulls/objects with one
+key per frame (`… (baked target)`, `… (Copy)`, `… (Baked)` instances), sometimes still visible or
+still **linked** (e.g. a Target tag aiming at a baked null). After a retime they play the old
+timing: doubled parts, or a wobble at the old cycle period. Check:
+- every Target tag: `tg[c4d.TARGETEXPRESSIONTAG_LINK]`, `tg[c4d.TARGETEXPRESSIONTAG_UP_LINK]`;
+- objects with ~1 key per frame (`cv.GetKeyCount()` ≈ frame count) and their visibility.
+Hide/mute rather than delete: `tr[c4d.ID_CTRACK_ANIMOFF] = True`, visibility 1 = off.
+
+## Slider-crank (piston) target, live (verified)
+For a con-rod aimed by a Target tag, place the target on the cylinder axis at rod length from the
+crank pin; the rod end then lands exactly on the axis at every crank angle:
+```python
+# Python tag on the target null, Expression 5 (after the shaft driver at 0, before the Target tag at 10)
+P = pin.GetMg().off; L = (rod_end.GetMg().off - P).GetLength()     # rigid pin -> rod end
+axis_x = obj.GetUp().GetMg().off.x
+mg = obj.GetMg(); mg.off = c4d.Vector(axis_x, P.y + math.sqrt(max(L*L - (P.x-axis_x)**2, 0)), mg.off.z)
+obj.SetMg(mg)
+```
+Pass `pin` / `rod_end` as Link user data on the tag. Reproduced the original TDC/BDC heights exactly.
+
+## Retiming a cycle control with monotone keys (verified)
+To re-time an angle/progress control (crank angle, path %) to story beats without overshoot or
+reversal, key the beats and set Fritsch–Carlson tangents yourself:
+```python
+K = [(sec, value), ...]                                   # strictly increasing values
+h = [K[i+1][0]-K[i][0] for i in range(len(K)-1)]; dl = [(K[i+1][1]-K[i][1])/h[i] for i in range(len(h))]
+m = [dl[0]] + [0]*(len(K)-2) + [dl[-1]]
+for i in range(1, len(K)-1):
+    w1, w2 = 2*h[i]+h[i-1], h[i]+2*h[i-1]
+    m[i] = 0 if dl[i-1]*dl[i] <= 0 else (w1+w2)/(w1/dl[i-1] + w2/dl[i])
+cv.FlushKeys()
+for i, (t, v) in enumerate(K):
+    k = cv.AddKey(c4d.BaseTime(t))["key"]; k.SetValue(cv, v); k.SetInterpolation(cv, c4d.CINTERPOLATION_SPLINE)
+    k.ChangeNBit(c4d.NBIT_CKEY_AUTO, c4d.NBITCONTROL_CLEAR); k.ChangeNBit(c4d.NBIT_CKEY_BREAK, c4d.NBITCONTROL_SET)
+    if i > 0:        k.SetTimeLeft(cv, c4d.BaseTime(-h[i-1]/3)); k.SetValueLeft(cv, -m[i]*h[i-1]/3)
+    if i < len(K)-1: k.SetTimeRight(cv, c4d.BaseTime(h[i]/3));   k.SetValueRight(cv, m[i]*h[i]/3)
+```
+- Angle user data with unit degrees stores **radians**: key `math.radians(deg)`.
+- Verify by sampling `cv.GetValue(BaseTime)` densely: monotonic, and every key hit exactly.
+- Before keying, map the mechanism once (sample the part positions over one cycle at 10° steps,
+  two passes per sample) so beats can be expressed as angles (e.g. TDC/BDC, valve open ranges).
 
 ## Deliver the rig
 - Wrap edits in `doc.StartUndo()` / `AddUndo(UNDOTYPE_NEWOBJ | CHANGE, …)` / `EndUndo()`, then `c4d.EventAdd()`.
 - The user may edit the scene while you work (lights and views appeared mid-session). Re-read the
-  hierarchy before each structural change, and never save the file unless asked.
+  hierarchy before each structural change. Don't overwrite the user's file: when work should be
+  saved, Save-As under the user's versioning convention (e.g. a date suffix) — see `cinema4d-mcp`.
 
 ## Keeping this skill current
 After any session that used Houdini/Cinema 4D via MCP, or whenever something new is verified:
@@ -186,5 +251,6 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 3. Put each finding in the skill it belongs to (see the indexes in `houdini-mcp` and `cinema4d-mcp`);
    project-specific facts go to that project's notes (see `project-notes`), never into a skill.
 4. Keep each SKILL.md under ~300 lines; split into a new sub-skill or `references/` when it grows.
-5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push.
-   Tell the user in one line what changed.
+5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
+   in a public repo keep personal names and client details out of the text. Tell the user in one line
+   what changed.

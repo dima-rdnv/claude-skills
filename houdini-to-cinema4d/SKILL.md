@@ -1,6 +1,6 @@
 ---
 name: houdini-to-cinema4d
-description: The Houdini side of getting particles and meshes into Cinema 4D — the verified Alembic export chain (attribute clean-up, scale to C4D space, width instead of pscale, rop_alembic), one-frame read-back tests, re-exporting from a finished .abc without re-simulating, file sizes, and monitoring long exports. Use when exporting from Houdini for Cinema 4D / Redshift. Load with houdini-mcp; the C4D side is in cinema4d-alembic and cinema4d-redshift.
+description: The Houdini side of getting particles and meshes into Cinema 4D — the verified Alembic export chain (attribute clean-up, scale, width instead of pscale, rop_alembic), meshes with point attributes for C4D vertex maps, one-frame read-back tests, re-exports, file sizes, monitoring long exports. Use when exporting from Houdini for Cinema 4D / Redshift. Load with houdini-mcp.
 ---
 
 # Houdini → Cinema 4D (Houdini side)
@@ -21,6 +21,20 @@ dopimport → attribdelete → xform (scale) → attribadjustfloat (pscale ×sca
   `parm('execute').pressButton()`. `f1/f2` default to `$FSTART/$FEND` expressions —
   `deleteAllKeyframes()` before `set()` (see `houdini-mcp`).
 - Houdini writes Alembic time = frame/fps → C4D frame N = Houdini frame N.
+
+## Mesh with point attributes for C4D vertex maps / MoGraph (verified)
+For a deforming mesh whose per-point values (e.g. a burn front, char, glow) should drive C4D
+effectors or materials:
+```
+<mesh with point floats> → attribwrangle (clamp each float to 0..1; v@Cd = set(h, h, h) for a grey value)
+  → attribdelete (ptdel '* ^P ^Cd ^front ^char ^emit', prim/vtx/detail '*') → xform (back to C4D units)
+  → rop_alembic (f3 = hip fps / 30 → one sample per 30 fps frame)
+```
+- C4D turns each float into an animated Vertex Map and `Cd` into a Vertex Color tag (details and the
+  effector recipes in `cinema4d-alembic`). Keep the point count and order constant over the range.
+- Size: 312k points with 3 floats + Cd ≈ 10.5 MB per frame (108 frames = 1.13 GB).
+- Building the export nodes from a hython script without saving the hip leaves the user's file
+  untouched (create the temporary nodes, `pressButton()` on the ROP, quit).
 
 ## Verify before a full export
 - Write ONE frame to a separate file, read it back (`alembic` SOP + `unpack`, transfer `*`): counts,
@@ -55,5 +69,6 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 3. Put each finding in the skill it belongs to (see the indexes in `houdini-mcp` and `cinema4d-mcp`);
    project-specific facts go to that project's notes (see `project-notes`), never into a skill.
 4. Keep each SKILL.md under ~300 lines; split into a new sub-skill or `references/` when it grows.
-5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push.
-   Tell the user in one line what changed.
+5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
+   in a public repo keep personal names and client details out of the text. Tell the user in one line
+   what changed.

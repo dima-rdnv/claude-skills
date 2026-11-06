@@ -11,6 +11,7 @@ parameter the user overrides in a take will not follow an edit made in the Main 
 
 ## Read what exists
 ```python
+import maxon          # printing some override values fails with "maxon module needs to be imported first"
 td = doc.GetTakeData(); main = td.GetMainTake(); cur = td.GetCurrentTake()
 def walk(t, d=0):
     while t:
@@ -27,12 +28,12 @@ walk(main)
 - User-data overrides show as DescID `((700, 5, 0), (id, dtype, 0))`.
 - Render output tokens, e.g. `...\$prj_$take\$prj_$take_` in `RDATA_PATH`, give each take its own folder.
 
-## Create and edit (verified in a blank doc)
+## Create and edit (verified)
 ```python
 t = td.AddTake("Variant A", main, None)                  # name, parent, clone-from
 t.FindOrAddOverrideParam(td, obj, c4d.DescID(c4d.DescLevel(c4d.PRIM_CUBE_LEN, c4d.DTYPE_VECTOR, 0)), c4d.Vector(50))
 t.FindOrAddOverrideParam(td, rig, ud_descid, 2)           # user data works the same way
-t.SetCamera(td, cam); t.SetRenderData(td, rd)             # rd must be inserted: doc.InsertRenderData(rd)
+t.SetCamera(td, cam); t.SetRenderData(td, rd)             # rd must be inserted: doc.InsertRenderData(rd, parent, pred)
 og = t.AddOverrideGroup(); og.SetName("hide")
 og.AddToGroup(td, obj); og.SetEditorMode(c4d.MODE_OFF); og.SetRenderMode(c4d.MODE_OFF)
 t.SetChecked(True)
@@ -43,6 +44,14 @@ t.SetChecked(True)
   back to Main restores the values. The user sees this happen, so restore their current take afterwards.
 - Wrap edits in undo. Takes are document data, so don't create or delete takes in a user's scene
   unless asked.
+- `AddTake` inserts the new take as the FIRST child, so a loop creates them in reverse order.
+  Reorder with `t.Remove(); t.InsertUnderLast(parent)` — camera and render data stay assigned (verified).
+- **Render settings: `rd.GetClone()` copies the child render settings too.** Cloning a parent setting
+  once per shot to make its children nested each new clone under the previous ones — 12 shots gave
+  ~4,000 settings. Clone without children (`GetClone(c4d.COPYFLAGS_NO_HIERARCHY)`, unverified) or
+  remove the clone's children before inserting it. Count the tree afterwards.
+- Render settings that should render at 30 fps from a 60 fps scene: `rd[5023] = False` (Use Project
+  Frame Rate) and `rd[c4d.RDATA_FRAMERATE] = 30`; frame range as `c4d.BaseTime(frame30, 30)`.
 
 ## Replicating a take setup from a reference file (verified C4D 2026.4)
 - `td.AddTake(name, parent, None)` inserts the new take as the **first** child. Add them in reverse
@@ -80,6 +89,33 @@ for did in ov.GetAllOverrideDescID():
   that overrides it, not only the object's current value.
 - The user may add takes mid-session. List the takes again right before changing user data.
 
+## Split one long edit camera into shot cameras + takes (verified)
+For a scene where one camera plays the whole film (step keys at the cuts) and each shot should get
+its own camera, take and render range:
+```python
+trans = c4d.AliasTrans(); trans.Init(doc)
+rig = master_rig.GetClone(c4d.COPYFLAGS_NONE, trans)      # rig = null + camera + focus null
+doc.InsertObject(rig, shot_cams_null, prev); trans.Translate(True)   # camera focus link -> the clone's focus null
+# keep only the keys that shape this shot: from the last key <= shot start to the first key >= shot end
+k0 = max(k for k in keys if k <= a); k1 = min(k for k in keys if k >= b)
+for i in range(cv.GetKeyCount() - 1, -1, -1):
+    f = cv.GetKey(i).GetTime().GetFrame(fps)
+    if f < k0 or f > k1: cv.DelKey(i)
+```
+- Verify by sampling the track, not the curve: `tr.GetValue(doc, c4d.BaseTime(f, fps), fps)` against
+  the master track on every frame of the shot — got 0.0000 difference, spline ease keys included.
+- **Handles: don't use the track's Before/After "Continue"** (track params 910 / 911: 0 Off,
+  1 Constant, 2 Continue, 3 Repeat, 4 Offset Repeat, 5 Oscillate, 6 Loop). With ease keys (long zero-value
+  tangents) or step keys it extrapolated nonsense (z −1,200,000). Set both to Constant (1) and add an
+  explicit linear key at each handle end, value = boundary value ± boundary slope × handle length
+  (slope from two samples of the master). Set the boundary key to linear first if it was a step key —
+  the segment inside the shot is unchanged when the key before it is linear. Hold instead of
+  continuing after a crash zoom IN (continuing flies through the subject).
+- One take per shot under the take that carries the shared look/visibility overrides, each with its
+  camera and a child render setting (shot range + handles, output path per shot). A continuous move
+  split into two shots can share one camera.
+- Keep the old camera as a renamed reference rig if other takes (stills, a full-length preview) use it.
+
 ## Verify or render a take without touching the open scene
 ```python
 x = td.TakeToDocument(t)        # new document with the take's overrides baked in
@@ -90,8 +126,32 @@ c4d.documents.KillDocument(x)
   override) moved the emitter along the right spline and simulated independently.
 - Verified: override groups with render mode OFF show up as object render visibility 1 (off) in
   the take document.
+- TakeToDocument is also the clean way to export one take's geometry (e.g. Alembic of a MoGraph
+  object with the take's visibility): select the object in the take document, save with
+  `FORMAT_ABCEXPORT`, kill the document. A 113-frame, 312k-point export ran ~3 min (longer than the
+  60 s bridge wait; poll the file size until it stops growing).
 - (unverified) In a test, every take document's *active* render data came back as the last
   inserted RenderData. When rendering a take, pass `t.GetEffectiveRenderData(td)[0]` to RenderDocument explicitly.
+
+## Render several takes through the Render Queue — no per-take file copies (verified C4D 2026)
+```python
+br = c4d.documents.GetBatchRender()
+n = br.GetElementCount(); br.AddFile(path, n)
+names = []
+for i in range(br.GetTakeCount(n)):                       # take index = depth-first order of the take tree, Main = 0
+    br.SetActiveTakeIndex(n, i, False); names.append(br.GetActiveTakeName(n))
+br.SetActiveTakeIndex(n, names.index("F02_VP"), False)    # this job renders that take
+print(br.GetActiveRenderSettingsName(n))                   # -> the take's render settings
+# one AddFile per take, same path; then br.SetRendering(c4d.BR_START)
+```
+- Verified: each job rendered its take's camera, frame range and output path; a shot render matched
+  the old full-length render at the same frames (PSNR 45–46 dB, codec noise only).
+- Binding quirks, which differed between runs: `GetAllTakeNames(n)` failed once (asked for a 'takeOnly'
+  argument, then rejected extra arguments) and worked later (see `cinema4d-mcp`); the `GetActive…`
+  getters raise "Required argument 'filename'" when given the job alone, so pass `(n, path)` if the
+  recipe above raises. `GetActiveCameraIndex` works but did not line up with `GetAllCameraNames` —
+  trust the take, not that index.
+- Save the file before adding the jobs; each job loads the file from disk when it starts.
 
 ## Working with a rig that has takes
 - Rig controls that differ per take (path index, colours, sizes) belong in take overrides on the
@@ -107,5 +167,6 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 3. Put each finding in the skill it belongs to (see the indexes in `houdini-mcp` and `cinema4d-mcp`);
    project-specific facts go to that project's notes (see `project-notes`), never into a skill.
 4. Keep each SKILL.md under ~300 lines; split into a new sub-skill or `references/` when it grows.
-5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push.
-   Tell the user in one line what changed.
+5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
+   in a public repo keep personal names and client details out of the text. Tell the user in one line
+   what changed.

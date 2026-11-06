@@ -108,7 +108,7 @@ This confirms something rendered, and where, before spending tokens on an image.
   scene's px/cm (camera focal, distance, render width), and compare with the same frames of yours.
 
 ## Viewport screenshot (computer use)
-- `computer_resolve_access(["Maxon Cinema 4D 2026"])` → `computer_request_access` → `computer_screenshot`
+- `computer_resolve_access(["Maxon Cinema 4D <year>"])` (macOS: `"Cinema 4D"`) → `computer_request_access` → `computer_screenshot`
   / `computer_zoom`. Other apps get hidden while granted.
 - After a script changes time, call `c4d.EventAdd()` before the screenshot. The viewport draws
   particles (dots) and Cloner instances. A timeline click at "|<" etc. may start playback: check

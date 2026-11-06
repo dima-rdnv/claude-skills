@@ -1,9 +1,9 @@
 ---
 name: cinema4d-redshift
-description: Redshift in Cinema 4D through Python — building and editing Redshift node materials with the maxon graph API (node and port IDs for RS Standard, state/math/colour-mix nodes, attribute lookups, user data, reading wiring), an emission-only lit-gold recipe that needs no lights, the RS Object tag particle settings (Alembic and native particle groups), fast test renders with RenderDocument and pixel-level verification, viewing renders from the sandbox, and verified dead ends (per-particle colour on Alembic Particle Groups). Use when shading or test-rendering with Redshift in C4D. Load with cinema4d-mcp.
+description: Redshift in Cinema 4D through Python — node materials via the maxon graph API (node/port IDs), an emission-only lit-gold recipe, RS Object tag particle settings, splines as RS curves, RS Camera ids, image sequences on the Texture node, verifiable test renders, rendering a take with Redshift from a script (GUI threaded render, take render settings, out-of-memory code), and verified dead ends. Use when shading or test-rendering with Redshift in C4D. Load with cinema4d-mcp.
 ---
 
-# Redshift in Cinema 4D (verified, C4D 2026.3)
+# Redshift in Cinema 4D (verified, C4D 2026.3–2026.4)
 
 ## Node materials through the maxon API
 - Every material is type 5703; the Redshift graph lives in a node space:
@@ -154,6 +154,27 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
 - A scene's render output path may be a Windows path (`D:/...`) — on macOS that creates a folder named
   `D:` next to the scene; keep SAVEIMAGE off for tests.
 
+## Rendering a take with Redshift from a script (verified C4D 2026.4, macOS)
+- `RenderDocument` with Redshift on a **headless c4dpy** document, and in the GUI on an in-memory
+  `TakeToDocument` copy, returned 0 but wrote a uniform blank image (1.6 KB PNG). The recipe above
+  (active document in the GUI) is the one that renders.
+- Working route for a take: open the file in the GUI, `td.SetCurrentTake(take)`, clone the take's
+  render setting (`GetClone(c4d.COPYFLAGS_NO_HIERARCHY)`), set `RDATA_RENDERENGINE = 1036219`, insert
+  `BaseVideoPost(1036219)` if missing, `doc.InsertRenderDataLast(rd)` and **`take.SetRenderData(td, rd)`**
+  — a take's own render setting wins over `doc.SetActiveRenderData(rd)` (the first try rendered the
+  take's Viewport setting). Then the Maxon MCP `start_render` (threaded; C4D stays usable), poll
+  `get_render_status`, close the document with `force` so nothing is saved.
+- Result code **1 = out of memory** after ~10 s while After Effects held 57 GB on a 64 GB
+  unified-memory Mac; after `app.purge(PurgeTarget.ALL_CACHES)` in AE (−50 GB) it rendered. Check
+  `top -o mem` before blaming the scene. (With Rendering Mode `[21151] = 1` progressive it also failed
+  with 1 — not retried after the purge; bucket mode `0` rendered.)
+- Redshift videopost ids seen: 21151 Rendering Mode, 1003 progressive passes, 1101/1102 samples
+  min/max, 5801 global displacement, 5002 refraction trace depth, 9006 refraction (another depth).
+  Preview settings for a refractive blob scene with 500k sphere clones: displacement off, refraction
+  depth 2, 640×360 → ~1.5 min per frame (a 960×540 frame with every clone emitting white took ~10 min).
+- MoGraph colour in a material: Color User Data node (`rsuserdatacolor`) with attribute `RSMGColor`
+  reads the clone colour set by effectors (seen in a production clone material feeding a ramp).
+
 ## Verified dead end: per-particle colour on Alembic Particle Groups
 - Positions and radius render, but colour does not reach Redshift: Vertex Attribute Lookup `__cd__`
   → default (magenta); Particle Attribute Lookup `color` / `__cd__` → black; Color User Data
@@ -161,8 +182,9 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
   Ruled out: render engine, OCIO, fps/time range, doc path, scene objects, materials.
 - Routes instead: Redshift Proxy from Houdini (needs Redshift for Houdini; Cd via RS Point
   Attribute), polygon mesh with point Cd (spheres copied to points or a VDB mesh → Vertex Color tag →
-  Vertex Attribute Lookup; heavy files), or a procedural colour in the RS shader (age/position driven;
-  whether Particle Attribute Lookup reads `age` is untested).
+  Vertex Attribute Lookup; heavy files), a procedural colour in the RS shader (age/position driven;
+  whether Particle Attribute Lookup reads `age` is untested), or clones on a mesh whose vertex maps
+  drive MoGraph colour (`cinema4d-alembic`).
 
 ## Keeping this skill current
 After any session that used Houdini/Cinema 4D via MCP, or whenever something new is verified:
@@ -171,5 +193,6 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 3. Put each finding in the skill it belongs to (see the indexes in `houdini-mcp` and `cinema4d-mcp`);
    project-specific facts go to that project's notes (see `project-notes`), never into a skill.
 4. Keep each SKILL.md under ~300 lines; split into a new sub-skill or `references/` when it grows.
-5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push.
-   Tell the user in one line what changed.
+5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
+   in a public repo keep personal names and client details out of the text. Tell the user in one line
+   what changed.
