@@ -62,6 +62,14 @@ t.SetChecked(True)
   remove the clone's children before inserting it. Count the tree afterwards.
 - Render settings that should render at 30 fps from a 60 fps scene: `rd[5023] = False` (Use Project
   Frame Rate) and `rd[c4d.RDATA_FRAMERATE] = 30`; frame range as `c4d.BaseTime(frame30, 30)`.
+- **One render setting per shot, not per take**: put the take token in the output path —
+  `.../<shot>/$take/$take`, `$take_LQ` also works (renders `<take>_LQ/<take>_LQ.0760.exr`, verified
+  with Commandline). Per-take settings (23 for 23 passes) were judged far too many by the user.
+- Output names with a dot in the take/file name (`thr0.05`) are cut at the dot: three variants
+  overwrote each other. Keep dots out of names.
+- Redshift passes whose materials are unlit (Fresnel/X-ray, self-lit emission): switch GI off
+  (`rs_vp[7005] = 0`) — verified pixel-identical; the Unified sampling threshold (`[1103]`) can go
+  up to 0.1 for such alpha-only passes without visible change.
 - **EXR half float** (C4D 2027): `rd[c4d.RDATA_FORMATDEPTH] = 1` raises "parameter set failed" and a
   container write doesn't stick (files came out 32-bit float). Use the image settings dictionary:
   `d = maxon.DataDictionary(); d.Set(maxon.MEDIASESSION.OPENEXR.EXPORT.HALFFLOAT, True);
