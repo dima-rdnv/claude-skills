@@ -1,32 +1,53 @@
 # After Effects bridge on macOS (verified AE 2026)
 
-These notes were verified with the earlier ScriptUI panel (`ClaudeBridge.jsx`), which uses the same
-inbox, outbox, signing and `send.sh` as the CEP panel in `../SKILL.md`. **The CEP panel has not been
-tested on macOS yet**, and `install.ps1` is Windows-only.
+The CEP panel in `../SKILL.md` was verified on macOS on 6 Nov 2026 (AE 26.5, Apple Silicon): install,
+`heartbeat.json`, and `send.sh` scripts answering before, during and after an open Project Settings
+dialog (within 2 s). Notes marked *ScriptUI* come from the earlier panel (`ClaudeBridge.jsx`), which
+used the same inbox, outbox, signing and `send.sh`; they have not been rechecked with the CEP panel.
 
 ## The panel
-- CEP (untested on macOS): a signed copy made with `install.ps1 -ShareTo <dir>` on Windows goes into
-  `~/Library/Application Support/Adobe/CEP/extensions/`; AE finds it at start-up, under Window › Extensions.
-- ScriptUI (verified, with the limits listed under "Why not a ScriptUI panel" in `../SKILL.md`): the file
-  is in this repo's history, `git show afc3c01^:aftereffects-bridge/scripts/ClaudeBridge.jsx`. It lands in
+- Install with AE closed: `scripts/install.sh` signs `panel/`, installs it to
+  `~/Library/Application Support/Adobe/CEP/extensions/com.claude.aebridge` and moves any old
+  `ClaudeBridge.jsx` from AE's ScriptUI Panels folders to the Trash. Then start AE and open Window ›
+  Extensions › Claude Bridge. An existing `~/.claude/ae-bridge.key` and bridge folder keep working.
+- It needs Adobe's `ZXPSignCmd` 4.1.3 for macOS (Adobe-CEP/CEP-Resources, `ZXPSignCMD/4.1.3/macOS`) in
+  `~/.claude/cep-signing`; the script prints the download command if it is missing, and creates the
+  self-signed certificate and its password there on first run. Never share or commit those. The tool
+  is Intel-only and not code-signed, so Apple Silicon needs Rosetta. Downloaded with `curl` it ran
+  with no Gatekeeper prompt; Adobe's readme says a blocked copy needs Allow in Privacy & Security.
+- First open: the panel floated at nearly the size of AE's window, so dock it.
+- A Windows-signed copy (`install.ps1 -ShareTo`) passed `ZXPSignCmd -verify` on a Mac but was not
+  loaded in AE; Adobe's known-issue note advises signing on the platform the panel runs on.
+- Not checked with the CEP panel on macOS: reopening with AE when docked, Stop / Start, refusing
+  unsigned scripts, and a Mac where AE has no Documents access yet. There macOS may ask for access;
+  the panel swallows file errors, so a refusal would show as no `heartbeat.json` and scripts sitting
+  in `inbox/` (read from the code). Allow it, or `useFolder` a folder outside Documents.
+- Without Apple's Command Line Tools each `send.sh` may raise an "install developer tools" dialog
+  (expected, not seen here): `xcode-select --install`.
+- Driving AE's UI with computer-use: menus work in the background, but AE exposes no accessibility
+  tree, and background clicks and Escape did not reach the Project Settings dialog. It closed only
+  with AE in front and a real click.
+- *ScriptUI* (with the limits under "Why not a ScriptUI panel" in `../SKILL.md`): the file is in this
+  repo's history, `git show afc3c01^:aftereffects-bridge/scripts/ClaudeBridge.jsx`. It lands in
   `~/Library/Preferences/Adobe/After Effects/<ver>/Scripts/ScriptUI Panels/` (File › Scripts › Install
-  ScriptUI Panel…), and needs Preferences › Scripting & Expressions › *Allow Scripts to Write Files and
-  Access Network*. Restart AE, Window › ClaudeBridge.jsx, dock it.
+  ScriptUI Panel…). Restart AE, Window › ClaudeBridge.jsx, dock it. Never run it beside the CEP panel.
+- Both panels need Preferences › Scripting & Expressions › *Allow Scripts to Write Files and Access
+  Network*.
 - To reach AE with no panel at all, see `aftereffects-scripting` (AppleScript → ExtendScript).
 
 ## Starting and sending
-- **AE not running:** `open -a "Adobe After Effects 2026"` from the shell brought AE up with the
-  docked panel listening; a ping answered ~1 min later without the user. The project opens from a
-  bridge script (`app.open`) — check `app.project.dirty` first.
-- Default ROOT `~/Documents/ClaudeBridge` (inbox / outbox / done). Keep a copy of `send.sh` and the
-  scripts in a local, non-synced stage folder and run from the Mac shell:
-  `STAGE=<stage> BRIDGE=~/Documents/ClaudeBridge ./send.sh 010_name 120`. The first call creates
+- **AE not running:** `open -a "Adobe After Effects 2026"` from the shell starts it. *ScriptUI:* with
+  the panel docked, a ping answered ~1 min later without the user. The project opens from a bridge
+  script (`app.open`) — check `app.project.dirty` first.
+- Default ROOT `~/Documents/ClaudeBridge` (inbox / outbox / done). Keep the scripts in a local,
+  non-synced stage folder and run from the Mac shell:
+  `STAGE=<stage> BRIDGE=~/Documents/ClaudeBridge bash send.sh 010_name 120`. The first call creates
   `~/.claude/ae-bridge.key`; the panel accepted the signed scripts straight away.
 - A shared include (`$.evalFile(new File("~/stage/shots.jsxinc"))`) keeps tables (shot list, paths)
   in one place; keep it out of synced folders (evalFile'd files skip the signature check).
-- `$.global.ClaudeBridge.writeText(pathString, text)` failed ("Function f.open is undefined"). For
-  big results write your own file (`new File(path)`, `encoding = "UTF-8"`, open/write/close) and read
-  it from the shell; return only a short summary.
+- `$.global.ClaudeBridge.writeText` takes a `File`, not a path: a string fails with "Function f.open
+  is undefined". For big results write a file (`new File(path)`, `encoding = "UTF-8"`,
+  open/write/close) and read it from the shell; return only a short summary.
 
 ## Preview frames
 - 32-bpc project: the 16-bit RGBA PNGs looked dark too; Homebrew ffmpeg handled them fine:
@@ -36,7 +57,7 @@ tested on macOS yet**, and `install.ps1` is Windows-only.
   decode its `result` string there (worked up to ~310 kB of base64).
 
 ## Render queue
-- **`rq.render()` from a bridge script rendered nothing** — it returned after a few seconds with every
+- *ScriptUI:* **`rq.render()` from a bridge script rendered nothing** — it returned after a few seconds with every
   item still QUEUED (status 3015). The same queue code run through AppleScript rendered normally:
   `( osascript -e 'tell application "Adobe After Effects 2026" to DoScriptFile (POSIX file "/tmp/x.jsx")' >/dev/null 2>&1 & )`,
   the JSX writes its result to a file; poll the output file. Remove the queue items your attempt

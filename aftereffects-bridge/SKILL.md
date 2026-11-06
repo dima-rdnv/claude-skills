@@ -27,8 +27,8 @@ button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` expo
 `VERSION`, `runs`, `stringify`, `readText`, `writeText`, `log` (shown in the panel and
 `bridge.log`), `useFolder` and `info()` to scripts.
 
-**On macOS read `references/macos.md` first.** Those notes were verified with the earlier ScriptUI
-panel, not yet with this CEP panel, and `install.ps1` is Windows-only.
+**On macOS read `references/macos.md` first.** The CEP panel is verified there too, installed with
+`scripts/install.sh`; `install.ps1` is Windows-only.
 
 ## Installing / finding it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
@@ -42,15 +42,17 @@ panel, not yet with this CEP panel, and `install.ps1` is Windows-only.
   `-ShareTo <dir>` also writes the signed copy colleagues install (they copy that folder into their
   CEP extensions folder; Mac: `~/Library/Application Support/Adobe/CEP/extensions/`). AE finds new
   extensions only at start-up: restart, Window › Extensions › Claude Bridge, dock it.
-- Every edit to a panel file breaks the signature: re-run `install.ps1`. The panel loads
+- Install (verified AE 2026, macOS): `scripts/install.sh` does the same with Adobe's macOS
+  `ZXPSignCmd` from `~/.claude/cep-signing`; details in `references/macos.md`.
+- Every edit to a panel file breaks the signature: re-run the install script. The panel loads
   `host.jsx` each time it opens (and again whenever it finds the bridge code missing), so a new
   `host.jsx` takes effect when the user closes and reopens the panel; a bridge script can also
   `$.evalFile(Folder.userData.fsName + "/Adobe/CEP/extensions/com.claude.aebridge/host.jsx")`
   (keeps `runs` and the already-run signatures). A changed `index.html` needs the panel reopened.
 - You can't start it yourself: `AfterFX.exe -r <script>` against an already running AE 2026 did
   nothing (no second instance, script never ran; AE was on the Home screen). Ask the user.
-- **AE dialogs don't stop it** (verified 4 Nov 2026): a script sent while Project Settings was
-  open ran within a second. So a script can change things under an open dialog, and the user's
+- **AE dialogs don't stop it** (verified 4 Nov 2026 on Windows, 6 Nov 2026 on macOS): a script sent
+  while Project Settings was open ran within a couple of seconds. So a script can change things under an open dialog, and the user's
   OK may then overwrite them; if the user mentions a dialog is open, ask them to close it first.
 - A script that sits in `inbox/` for more than a few seconds means the panel is **stopped**
   (status `Stopped…`: ask the user to press Start), **closed** (ask them to open Window ›
