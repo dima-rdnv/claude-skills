@@ -184,6 +184,24 @@ c4d.documents.KillDocument(x)
   60 s bridge wait; poll the file size until it stops growing).
 - (unverified) In a test, every take document's *active* render data came back as the last
   inserted RenderData. When rendering a take, pass `t.GetEffectiveRenderData(td)[0]` to RenderDocument explicitly.
+- **Commandline renders a take** (verified 2027.0): `Commandline.exe … -render scene.c4d -take v2
+  -frame 120 120 -oimage …` — the frame was bit-identical to the take's earlier full render, and
+  without `-take` it rendered Main.
+
+## Fold a scene copy into a take, and promote a take to Main (verified 2027.0)
+- Fold: open the original, check it differs from the copy only where expected (compare objects'
+  `GetMl()` without tracks, points, materials, render setting names, fps/range), copy the copy's new
+  user-data entries with **their own IDs** (`SetUserDataContainer(did, bc)` in the copy's order) and
+  give them values that keep the old look on Main, then `AddTake` + `FindOrAddOverrideParam` for
+  every value that differs, plus a child render setting (clone of the parent, children removed,
+  only the path changed) set on the take. Proof: render one frame of Main and of `-take` with
+  Commandline and diff against renders made before the fold — both came out max diff 0.0.
+- Promote (the old look is no longer needed): for each `ov in t.GetOverrides()`,
+  `ov.GetSceneNode().SetParameter(did, ov.GetParameter(did, DESCFLAGS_GET_NONE), DESCFLAGS_SET_NONE)`
+  with Main current, copy what the take's render setting changed (here the path) into the parent,
+  `td.DeleteTake(t)`, `child.Remove()`. Main then rendered the take's frames exactly.
+- Works on a file the user closed without opening a tab: `LoadDocument` → edit → `SaveDocument` to
+  its path → `KillDocument` (check first that it isn't open in the GUI).
 
 ## Render several takes through the Render Queue — no per-take file copies (verified C4D 2026)
 ```python
