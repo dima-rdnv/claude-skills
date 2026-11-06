@@ -38,6 +38,16 @@ og = t.AddOverrideGroup(); og.SetName("hide")
 og.AddToGroup(td, obj); og.SetEditorMode(c4d.MODE_OFF); og.SetRenderMode(c4d.MODE_OFF)
 t.SetChecked(True)
 ```
+- **`FindOrAddOverrideParam` returns None for everything** (even a fresh cube) when the file has the
+  Take Manager's **Lock Overrides** on: `td.GetOverrideEnabling()` lacks `c4d.OVERRIDEENABLING_GLOBAL`
+  (64; 4031 instead of 4095). `c4d.CallCommand(431000108)` ("Lock Overrides") toggles it — works in
+  c4dpy on the active document (`InsertBaseDocument` + `SetActiveDocument`); toggle back before saving
+  to keep the owner's setting. Override groups and their tags work even while locked.
+- Object visibility (902/901) can't be a parameter override (None) — use override groups. A tag that
+  only some takes need: put it on the object with neutral values and override its parameters per take
+  (verified with an RS Object tag matte), or `og.AddTag(td, type, None)` on an override group.
+- Never call `ov.UpdateSceneNode(...)` while building: it pushes the override value into the scene
+  node of the current (Main) take.
 - `t.GetEffectiveCamera(td)` / `t.GetEffectiveRenderData(td)` return a tuple `(object, take)` that
   resolves inheritance. Use `[0]`.
 - `td.SetCurrentTake(t)` + `ExecutePasses` applies the overrides to the open document. Switching
@@ -52,6 +62,11 @@ t.SetChecked(True)
   remove the clone's children before inserting it. Count the tree afterwards.
 - Render settings that should render at 30 fps from a 60 fps scene: `rd[5023] = False` (Use Project
   Frame Rate) and `rd[c4d.RDATA_FRAMERATE] = 30`; frame range as `c4d.BaseTime(frame30, 30)`.
+- **EXR half float** (C4D 2027): `rd[c4d.RDATA_FORMATDEPTH] = 1` raises "parameter set failed" and a
+  container write doesn't stick (files came out 32-bit float). Use the image settings dictionary:
+  `d = maxon.DataDictionary(); d.Set(maxon.MEDIASESSION.OPENEXR.EXPORT.HALFFLOAT, True);
+  c4d.bitmaps.SetImageSettingsDictionary(d, rd.GetDataInstance().GetContainerInstance(c4d.RDATA_SAVEOPTIONS), c4d.FILTER_EXR)`.
+  `RDATA_NAMEFORMAT = c4d.RDATA_NAMEFORMAT_6` writes `name.0000.exr`.
 
 ## Replicating a take setup from a reference file (verified C4D 2026.4)
 - `td.AddTake(name, parent, None)` inserts the new take as the **first** child. Add them in reverse

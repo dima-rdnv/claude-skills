@@ -22,6 +22,23 @@ dopimport → attribdelete → xform (scale) → attribadjustfloat (pscale ×sca
   `deleteAllKeyframes()` before `set()` (see `houdini-mcp`).
 - Houdini writes Alembic time = frame/fps → C4D frame N = Houdini frame N.
 
+## Particles for Redshift Particle Groups (verified Nov 2026)
+- Write **from frame 0** (switch: before the first cache frame output the first frame with all points
+  blasted, so the attribute definitions stay) and give every empty frame one dummy point far away with
+  `width` 0 — a C4D Particle Group keeps old particles on empty samples (`cinema4d-alembic`).
+- Caches written every 2nd frame: `timeshift` to `floor($F/2)*2` and export every frame (repeated
+  samples are de-duplicated, file size unchanged).
+- Per-particle colour doesn't reach Redshift: split by colour into bins, one file each
+  (`cinema4d-redshift`). Build all temporary nodes in hython without saving the hip.
+
+## VDBs for Redshift RS Volume (verified Nov 2026)
+`object_merge` (into this object) of the masked volume → `blast` the unneeded fields (`@name=...`,
+primitives, negate) → `xform` ×10 (P and vector grids) → prim wrangle
+`setprimintrinsic(0, "vdb_is_saved_as_half_float", @primnum, 1)` → `rop_geometry`
+`.../<take>.\`padzero(4, $F/2)\`.vdb`, f3 = 2 (file number = the 30 fps frame of a 60 fps sim).
+Check the first frame: voxel ×10, bbox ×10, half intrinsic 1. 0.1–0.3 s/frame; 1390 frames ≈ 2 min,
+0.3–3 GB per sequence. Redshift side (file sub-ID, frame offset): `cinema4d-redshift`.
+
 ## Mesh with point attributes for C4D vertex maps / MoGraph (verified)
 For a deforming mesh whose per-point values (e.g. a burn front, char, glow) should drive C4D
 effectors or materials:

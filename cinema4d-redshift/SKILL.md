@@ -177,12 +177,30 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
 - MoGraph colour in a material: Color User Data node (`rsuserdatacolor`) with attribute `RSMGColor`
   reads the clone colour set by effectors (seen in a production clone material feeding a ramp).
 
-## Volumes: RS Volume object and volume material (IDs read in 2027.0, not yet rendered)
-- RS Volume = object type **1038655**. File = param 10000 of a Redshift custom type (1036765):
-  `op[10000] = str` raises TypeError; set it with `op.SetParameter(c4d.DescID(c4d.DescLevel(10000,
-  c4d.DTYPE_FILENAME, 0)), path, c4d.DESCFLAGS_SET_NONE)`. `####` in the name stands for the frame
-  number — whether the document frame or the render frame (doc 60 / render 30 fps) is UNVERIFIED.
-  Velocity grids 12000–12002, velocity scale 12003; `13000 Channels` stays empty in c4dpy.
+## Volumes: RS Volume object and volume material (verified by Commandline renders, C4D 2027.0)
+- RS Volume = object type **1038655**. Its file (param 10000) is a Redshift file custom type; set the
+  path through the **sub-ID**: `v[c4d.REDSHIFT_VOLUME_FILE, c4d.REDSHIFT_FILE_PATH] = "D:/x/a.0100.vdb"`
+  (reads back as `file:///...`). DEAD END: `SetParameter(DescID(DescLevel(10000, DTYPE_FILENAME...)))`
+  only stores a str — the render log says `Volume grids: 0`. The native Volume Loader (1039866) loads
+  in C4D but Redshift ignores it too (0 grids).
+- Sequences: `####` is NOT a token ("Could not resolve ...t.####50.vdb"). Give one numbered file and
+  `[F, REDSHIFT_FILE_ANIMATION_MODE] = ..._MODE_SIMPLE`, `TIMING_MODE = ..._TIMING_MODE_TIME`,
+  `FRAME_RATE = 30`, `FRAME_START = first`, `FRAME_END = last`, **`FRAME_OFFSET = -first`**: it loads
+  number `start + offset + floor(30 t)` = the 30 fps frame in a 60 fps document (without the offset
+  frame 3100 loaded start + 3100 → clamped to the last file). Defaults clamp to the file you gave.
+  The volume lists every frame of start..end as a scene asset (`GetAllAssetsNew`), so Team Render sees it.
+- Velocity grids 12000–12002, velocity scale 12003; `13000 Channels` stays empty in c4dpy.
+- Check the render log (`C:\ProgramData\Redshift\Log\Log.Latest.N\log.html`): `Loading: ...vdb` and
+  `Volume grids: N`.
+- **Pure-emission volumes need `density` = 0**: with no `density_name` the default density 1 fills the
+  whole VDB bounding box (a black, alpha-1 box). Emission from a channel is strong — on a ×10 (cm)
+  VDB, temperature × 0.6–1.0 / flame × 0.05 gave a fire about as bright as a Houdini GL glow of
+  emitscale 2–5. Colour by channel: `volumescalarattribute` (channel, old_min/max) → `rscolormix`
+  `.mixamount` → `standardvolume.emission_tint` works (2-key ramp; `rsramp` gradient not settable).
+- Emission from `density` for white haze blows out (peak 36 where alpha saturates) — light it instead:
+  a white RS dome (camera contribution `[10042] = 0`) enabled only in the smoke takes; scatter white
+  for white haze, dark scatter for black smoke. Density per cm: ~0.3–0.35 matched GL opacity of a
+  Houdini densityscale 1.5–3 volume scaled ×10.
 - Volume material: node `standardvolume` → output port `com.redshift3d.redshift4c4d.node.output.volume`
   (output ports: displacement, surface, rs_uv_context, contour, light, environment, volume, viewport,
   materialid). Inputs: `density_name`, `density`, `scatter_color`, `scatter_scale`, `anisotropy_mode`,
@@ -192,13 +210,26 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
   emission ramps and `*_old/new_min/max` remaps; channel readers `volumescalarattribute`
   (`channel_name`, `old/new_min/max`) and `volumecolorattribute`.
 - RS Object tag **matte / holdout**: 4999 override, 4000 enabled, 4004 alpha, 4001 show background,
-  4002 apply to secondary rays; shadow matte 4008–4010.
+  4002 apply to secondary rays; shadow matte 4008–4010. Verified: one tag on the **parent null** of a
+  53-mesh CAD model, overridden per take (4999/4000 on, 4004 = 0, 4001 off), cut the volumes and left
+  alpha 0 — no tag per mesh needed.
+- Scene lights: check that a take really has light before judging a lit material — a production RS
+  take had every light disabled (its X-ray Fresnel engine material is unlit), so particles with a lit
+  material rendered black. Use the emission-only "lit" recipe above for them.
+- RS camera `[13000]` Background 2 = Override (colour) writes that colour into RGB where alpha is 0
+  (grey 0.62 over a premultiplied EXR) — set 1 (Off) in pass takes.
+- Commandline renders (outside the GUI, the safe way to test): `Commandline.exe
+  g_licenseModel=LICENSEMODEL::MAXONAPP -render scene.c4d -take <name> -frame 456 456 -oimage <path>`.
+  Two Redshift renders on one GPU at once → "Rendering failed: Out of memory"; run them one by one.
 
 ## Verified dead end: per-particle colour on Alembic Particle Groups
 - Positions and radius render, but colour does not reach Redshift: Vertex Attribute Lookup `__cd__`
   → default (magenta); Particle Attribute Lookup `color` / `__cd__` → black; Color User Data
   `__cd__` → black. Cause: the colour channel is empty in real documents (see `cinema4d-alembic`).
   Ruled out: render engine, OCIO, fps/time range, doc path, scene objects, materials.
+- Simplest working route (used in production, Nov 2026): **colour bins** — in Houdini give each point
+  a bin by its Cd (e.g. max(Cd) > 0.85 / 0.55 / 0.15 / rest), export one Alembic per bin, one Particle
+  Group + material per bin. Points that change colour just move between files.
 - Routes instead: Redshift Proxy from Houdini (needs Redshift for Houdini; Cd via RS Point
   Attribute), polygon mesh with point Cd (spheres copied to points or a VDB mesh → Vertex Color tag →
   Vertex Attribute Lookup; heavy files), a procedural colour in the RS shader (age/position driven;

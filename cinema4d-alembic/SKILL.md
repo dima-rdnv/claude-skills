@@ -26,9 +26,14 @@ finally:
 - Houdini writes Alembic time = frame/fps. An Alembic **Generator** (meshes) shows Houdini frame N at
   C4D frame N when the file starts at time 0, so two such files from one exporter line up.
 - **A Particle Group maps the FIRST sample to frame 0.** A file exported from Houdini frame 571
-  played from C4D frame 0. Fix: write the Alembic from frame 0 (empty samples cost almost nothing) or
-  set the Particle Group's Offset (param 50006) to the start frame (verified: counts and heights
-  matched Houdini frame for frame).
+  played from C4D frame 0. Fix: **write the Alembic from frame 0** (empty samples cost almost nothing).
+  Setting the Offset (param 50006) instead also maps correctly, but changing Offset after import left
+  duplicated attribute tags (`____color____` next to `__color__`, c4dpy 2027) — the same mechanism as
+  the GUI popup loop below. Verified Nov 2026: written from 0, sample N = 60 fps document frame N,
+  counts matched Houdini at 6 checked frames.
+- **An EMPTY sample keeps the previous particles** in a Particle Group (11 stray full-size droplets
+  where the file had 0 points; 22 before the first non-empty sample). Fix in Houdini: when a frame has
+  no points add one dummy point far away with `width` 0 (invisible in Redshift).
 - Outside its range an Alembic holds the first/last sample, and frames exported EMPTY from Houdini
   did not blank a mesh either (a smoke mesh stayed visible for 100 s after its window) — key
   editor/render visibility (`ID_BASEOBJECT_VISIBILITY_EDITOR/RENDER`, 0 = on, 1 = off;
