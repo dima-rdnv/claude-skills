@@ -126,6 +126,8 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
 `references/upgrading-c4d.md`), which runs outside the GUI and rendered Redshift fine in 2027.0.
 - From a shell (e.g. when this session's cinema4d tools disconnected): Maxon's stdio relay with
   the token file — recipe and reply format in `references/shell-relay.md`.
+- "Is C4D stuck, should I restart?": process/main-thread checks, RS log, the Team Render `job.log`
+  that shows a job still rendering behind a "Not Responding" window → `references/is-c4d-stalled.md`.
 
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash
