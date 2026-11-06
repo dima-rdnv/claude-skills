@@ -287,7 +287,14 @@ br.EnableElement(i, False)                                              # skip a
     `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet` — and `SetUseNet(job, False)` right after
     `AddFile` did NOT untick the Team column (the job rendered with Team Render: its log lists `.b3d` frames
     out of order). Ask the user to check the Team column before starting.
-  - **"Error – Saving Image"**: the queue doesn't create missing output folders (Commandline does) —
+  - **Team Render jobs fail "Error – Saving Image" (before any client renders, 0–17 s) when ANY scene
+    asset is missing** — even an unused, hidden Alembic Generator with another machine's path; the
+    queue's `SetCheckTexture(False)` doesn't cover Team Render. Verified by elimination (frame rate,
+    volumes, particles, render settings were not it): `GetAllAssetsNew` must report nothing missing —
+    delete unused objects or relink. Assets local to the server (`D:/cache/*.vdb`, `.abc`) are
+    transferred to the clients fine. Test such things with a copy saved NEXT to the real file
+    (relative `./tex` paths break in a scratch folder and confound the test).
+  - **"Error – Saving Image"** (local queue): the queue doesn't create missing output folders (Commandline does) —
     create `<shot>/<take>/` folders before starting. **"Error – Missing Files"** also flags absolute
     paths from another machine (`/Users/...`) that `GetAllAssetsNew` resolves by name: relink them
     project-relative (`tex/...`), or `SetCheckTexture(False)` when the missing files are unused.
