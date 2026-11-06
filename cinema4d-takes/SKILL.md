@@ -9,6 +9,31 @@ Takes are a common way to render several variants of one scene (e.g. one take pe
 with the `$take` token in the output path). **Before changing a scene, list its takes.** A
 parameter the user overrides in a take will not follow an edit made in the Main take.
 
+**Default for any variant (v2 look, alternative setting, extra output):** a take that overrides only
+the parameters that differ, plus a child render setting under the shot's render setting that changes
+only the differing render values. No scene copies, no full duplicate render settings, unless the user
+asks for files. New generator/rig features must reproduce the old look at their default values, so
+Main keeps the old look and the take switches the new controls on.
+
+## Child render settings from Python (verified C4D 2027.0, throwaway documents)
+- A `RenderData` inserted under a parent with `doc.InsertRenderData(child, parent, None)` reads the
+  parent's values and keeps following later parent edits — as long as nothing writes to it.
+- **One plain write detaches the whole child**: after `child[RDATA_XRES] = 1000`, parent changes to
+  any other parameter no longer reached it (same with `SetParameter(..., DESCFLAGS_SET_USERINTERACTION)`
+  or `DESCFLAGS_SET_NONE`). A write of the value it already has did not detach it.
+- `DESCFLAGS_SET_DONTAFFECTINHERITANCE` keeps it attached, but the written value is replaced by the
+  next parent change and is not kept through save/load — not an override.
+- "Inherit Parent Behavior" is not in the public API (Maxon forum: internal
+  `RENDERSETTINGS_BIT_OVERRIDEBEHAVIOUR`, 1 << 6; staff: it is not continuous copying and works poorly
+  from Python). A clone takes the flag of the parent it was cloned from. What the UI then does with
+  the user's own parent edits is unverified.
+- So: build each child as a clone of its parent without its children (see the `GetClone` note below),
+  write only the differing parameters, and when a script changes a parent value later, write the same
+  value into every child that doesn't intentionally differ (compare with the parent's old value).
+  List each child's intended differences in its name or a note so they stay visible.
+- Take overrides can't target render settings: `FindOrAddOverrideParam(td, renderdata, …)` returned
+  None. Assign per-take render settings with `t.SetRenderData(td, child)` instead.
+
 ## Read what exists
 ```python
 import maxon          # printing some override values fails with "maxon module needs to be imported first"
