@@ -141,6 +141,8 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
   The same scene's live document rendered 400×250 in < 60 s. Render a take by making it current on
   the live doc (restore it after), keep frames small, or use the adapter's `start_render` (own thread).
   After a long synchronous call the adapter times out on everything (`ping` too) — don't queue more.
+  **On 2027.0 (Windows) even a fresh 160×90 doc hung this way, and so did `start_render` and the Render
+  Queue** — read "Redshift renders from inside the GUI can hang C4D" in `cinema4d-mcp` first.
 - A geometry/texture placement check needs no render: export the deformed mesh + UVs, project it,
   and warp the texture frame per quad onto the plate (OpenCV `getPerspectiveTransform` per quad,
   combine with `max`, skip quads within a few cm of the camera — they project huge and paint black).
@@ -174,6 +176,23 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
   depth 2, 640×360 → ~1.5 min per frame (a 960×540 frame with every clone emitting white took ~10 min).
 - MoGraph colour in a material: Color User Data node (`rsuserdatacolor`) with attribute `RSMGColor`
   reads the clone colour set by effectors (seen in a production clone material feeding a ramp).
+
+## Volumes: RS Volume object and volume material (IDs read in 2027.0, not yet rendered)
+- RS Volume = object type **1038655**. File = param 10000 of a Redshift custom type (1036765):
+  `op[10000] = str` raises TypeError; set it with `op.SetParameter(c4d.DescID(c4d.DescLevel(10000,
+  c4d.DTYPE_FILENAME, 0)), path, c4d.DESCFLAGS_SET_NONE)`. `####` in the name stands for the frame
+  number — whether the document frame or the render frame (doc 60 / render 30 fps) is UNVERIFIED.
+  Velocity grids 12000–12002, velocity scale 12003; `13000 Channels` stays empty in c4dpy.
+- Volume material: node `standardvolume` → output port `com.redshift3d.redshift4c4d.node.output.volume`
+  (output ports: displacement, surface, rs_uv_context, contour, light, environment, volume, viewport,
+  materialid). Inputs: `density_name`, `density`, `scatter_color`, `scatter_scale`, `anisotropy_mode`,
+  `anisotropy`, `diameter`, `transmittance_color`, `depth`, `emission_name`, `blackbody_mode`,
+  `emission_tint`, `blackbody_temperature`, `blackbody_offset`, `emission_scale`,
+  `shadow_density_scale`, `extinction_falloff`, … The older `volume` node has scatter / absorption /
+  emission ramps and `*_old/new_min/max` remaps; channel readers `volumescalarattribute`
+  (`channel_name`, `old/new_min/max`) and `volumecolorattribute`.
+- RS Object tag **matte / holdout**: 4999 override, 4000 enabled, 4004 alpha, 4001 show background,
+  4002 apply to secondary rays; shadow matte 4008–4010.
 
 ## Verified dead end: per-particle colour on Alembic Particle Groups
 - Positions and radius render, but colour does not reach Redshift: Vertex Attribute Lookup `__cd__`

@@ -107,6 +107,29 @@ through `c4dpy`, both without MCP: see `references/upgrading-c4d.md`.
   the RenderData save settings and wrote RGBA. A save path with `$prj` turns spaces in the scene name
   into underscores and creates that folder.
 
+## Redshift renders from inside the GUI can hang C4D (verified 2027.0, adapter 1.0.0.26, Windows)
+Cause unknown (6 Nov 2026). Every in-GUI route waited forever, and only a C4D restart freed Redshift:
+- `exec_python` + `RenderDocument` (fresh 160×90 doc) → main thread blocked, window "Not Responding",
+  the adapter answered nothing; the user had to kill C4D.
+- `start_render` (own thread) → "rendering", 0 % for minutes; `stop_render` → "cancelled" but still
+  `running: true`, and every later render waited behind it.
+- Render Queue (`BR_START`, scene saved to disk) → the same wait, nothing written.
+- The Redshift log shows it (`C:\ProgramData\Redshift\Log\Log.Latest.0\log.html`, strip the HTML):
+  `Context: Locked:Render` then `Context: Busy:Render Waiting until idle`, and no further render lines.
+- A Redshift `RenderDocument` in **c4dpy 2027** hung too (idle, no output). A leftover c4dpy may not
+  be killable from here — ask the user to end it in Task Manager.
+Rules: (1) never `RenderDocument` with Redshift inside `exec_python`; (2) before relying on GUI
+renders in a session, render ONE tiny frame and read the RS log after ~20 s — on "Waiting until idle"
+stop, tell the user (restart needed) and don't retry; (3) while anything renders, watch only from
+outside (output folder, RS log), never fire tool calls into the busy app; (4) never `BR_STOP` from
+Python, stop the queue in its window; (5) test frames go through `Commandline.exe` (see
+`references/upgrading-c4d.md`), which runs outside the GUI and rendered Redshift fine in 2027.0.
+- Auth from a shell: plain HTTP to :5556 gets 401. Run Maxon's relay with its token file instead of
+  handling the token: `python <C4D>/resource/mxn_plugins/mcp_adapter/scripts/stdio_relay.py
+  http://127.0.0.1:5556/mcp --token-file %APPDATA%/Maxon/Maxon Cinema 4D 2027_<id>/prefs/mcp/token`,
+  newline JSON-RPC: initialize → notifications/initialized → tools/call. An `exec_python` reply that
+  times out after 30 s ("adapter dispatch timed out") keeps running in C4D — never resend.
+
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash
 C4D="$(ls -d "/Applications/Maxon Cinema 4D 20"* | tail -1)"     # newest installed version
