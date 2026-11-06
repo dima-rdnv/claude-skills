@@ -284,6 +284,10 @@ br.EnableElement(i, False)                                              # skip a
     reading ~27 MB/s — busy, not dead; wait it out, never kill). Fill a big queue in one call, read
     back with `GetElement`/`GetElementStatus`/`GetJsonJobs()` only, and warn the user first.
     `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet`.
+  - **"Error – Saving Image"**: the queue doesn't create missing output folders (Commandline does) —
+    create `<shot>/<take>/` folders before starting. **"Error – Missing Files"** also flags absolute
+    paths from another machine (`/Users/...`) that `GetAllAssetsNew` resolves by name: relink them
+    project-relative (`tex/...`), or `SetCheckTexture(False)` when the missing files are unused.
 - **Render settings frame rate:** `RDATA_FRAMERATE` is ignored while "Use Project Frame Rate"
   (param id `5023`) is on — set `rd[5023] = False` first, on the parent render settings too (a child
   followed its parent). Use this to render 30 fps from a 60 fps scene.
