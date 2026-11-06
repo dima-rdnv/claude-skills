@@ -284,7 +284,9 @@ br.EnableElement(i, False)                                              # skip a
     and a second listing call that asked each job's take froze the UI again ("Not Responding", but
     reading ~27 MB/s — busy, not dead; wait it out, never kill). Fill a big queue in one call, read
     back with `GetElement`/`GetElementStatus`/`GetJsonJobs()` only, and warn the user first.
-    `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet`.
+    `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet` — and `SetUseNet(job, False)` right after
+    `AddFile` did NOT untick the Team column (the job rendered with Team Render: its log lists `.b3d` frames
+    out of order). Ask the user to check the Team column before starting.
   - **"Error – Saving Image"**: the queue doesn't create missing output folders (Commandline does) —
     create `<shot>/<take>/` folders before starting. **"Error – Missing Files"** also flags absolute
     paths from another machine (`/Users/...`) that `GetAllAssetsNew` resolves by name: relink them
