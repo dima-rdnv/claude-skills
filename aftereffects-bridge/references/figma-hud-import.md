@@ -55,4 +55,20 @@
 - Packets travelling along a line: `duplicate()` the line **before** adding its build expressions,
   thicker round-capped stroke, Trim Start/End = a 9 % window sliding with `(t − T0)/period + phase`.
 - Rotating an arc around another element: set its anchor to `anchor + (pivot − position)` and its
-  position to the pivot (same parent, scale 100) — the render doesn't change.
+  position to the pivot (same parent, scale 100) — the render doesn't change. For a pivot given in
+  comp space use `fromComp([x, y])` (via the Point Control probe) as the new anchor and move the
+  position by `R(rotation)·S·Δanchor` — also exact for layers that are rotated in the design.
+  A marker "orbiting" along a Figma arc: circle centre from three `toComp(path.pointOnPath(u))`
+  points (circumcentre; deviation at u = .25/.75 was 0), then rotate the marker about it.
+
+## Idle-only HUD (no build-on) that stays alive
+- Ticking readouts: a Source Text expression that finds a number token in `String(value)` and
+  replaces it with `base ± n·step`, padded to the token length, changing every P seconds.
+  **`seedRandom(seed, true)` does not sync across layers**: AE mixes the layer and property in, so
+  two labels showing the same reading (e.g. "HDG 278" in a caption and in a micro label) drifted
+  apart. A hash instead, `x = Math.sin((seed·1013 + floor(T/P))·12.9898)·43758.5453; r = x − floor(x)`,
+  gave identical values on every layer.
+- Eased step rotations read as HUD-like: `k = floor(x/P); f = x − k·P; e = f < d ? ease(f, 0, d, 0, 1) : 1;
+  value + 45·(k + e − 1)` (the −1 makes frame 0 the design pose); 45° for square reticles, 120° for
+  a triad. Plus scanner sweeps (`sin`), a slow orbit of ±3°, packets, pulses, occasional blinks — one
+  "Motion Speed" slider scales T = time·speed for all of them.
