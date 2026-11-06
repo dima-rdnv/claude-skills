@@ -253,6 +253,11 @@ Per property: grab every key (`keyTime`, `keyValue`, `keyIn/OutInterpolationType
   Child layers don't inherit opacity — link it: `thisComp.layer("Button").transform.opacity`.
 - Effects by match name: `"ADBE Slider Control"`, `"ADBE Gaussian Blur 2"` (`-0001` = blurriness).
 
+## Figma HUD imported with Overlord (verified 6 Nov 2026)
+Merge Paths turning L-brackets into triangles, rotated text far off (and Figma's rotated-node x/y),
+feeds needing Screen, precomposing parts in place, and an expression build-on rig driven by one
+controls null → `references/figma-hud-import.md`.
+
 ## HUD precomps with Essential Properties (verified 4 Nov 2026)
 - Controls on a guide null inside the precomp; text/shapes read them by expression; expose with
   `prop.canAddToMotionGraphicsTemplate(comp)` + `prop.addToMotionGraphicsTemplateAs(comp, name)`.
