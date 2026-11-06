@@ -62,9 +62,13 @@ t.SetChecked(True)
   remove the clone's children before inserting it. Count the tree afterwards.
 - Render settings that should render at 30 fps from a 60 fps scene: `rd[5023] = False` (Use Project
   Frame Rate) and `rd[c4d.RDATA_FRAMERATE] = 30`; frame range as `c4d.BaseTime(frame30, 30)`.
-- **One render setting per shot, not per take**: put the take token in the output path —
-  `.../<shot>/$take/$take`, `$take_LQ` also works (renders `<take>_LQ/<take>_LQ.0760.exr`, verified
-  with Commandline). Per-take settings (23 for 23 passes) were judged far too many by the user.
+- **`$take` in the output path works in Commandline but NOT in the Render Queue** (C4D 2027): every
+  queued take job rendered its first frame and failed "Error – Saving Image", nothing written (the
+  queue log even showed the resolved path). Working layout: one parent render setting per shot and
+  quality (resolution, samples, range) with one **child per take** (a clone, named after the take,
+  explicit path `.../<shot>/<take>/<take>`) — tidy in the list (the user found 23 top-level settings
+  far too many), and a child clone keeps its own path (verified). Changing a file's render settings
+  after queuing: re-add the jobs (the job keeps the render setting it had when added).
 - Output names with a dot in the take/file name (`thr0.05`) are cut at the dot: three variants
   overwrote each other. Keep dots out of names.
 - Redshift passes whose materials are unlit (Fresnel/X-ray, self-lit emission): switch GI off
