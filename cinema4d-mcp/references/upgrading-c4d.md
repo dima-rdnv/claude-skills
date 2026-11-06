@@ -14,6 +14,12 @@
   render one finished frame to a scratch folder and diff it: a Redshift line scene came out
   bit-identical in 2027.0 vs 2026.4. Also verified: `-frame 0 240 120` (start end step) renders
   three frames; `-oresolution 1920 1080` renders at that size (good for quick motion tests).
+- **Check the output path within the first minute of a long render.** `-oimage "${Q}${N}\\${N}_"`
+  written in the Bash tool reached Commandline as `…\Sequence-videos\03_X_v2${N}_` (the log's
+  "Command line arguments" line shows it): `\\$` became `\$`, so the separator vanished and 243
+  frames landed in the parent folder as `03_X_v2${N}_0000.exr` (moved afterwards with `mv`). Build
+  the folder part with `"$(cygpath -w "$dir")\\Name_"` and spell the file prefix out, never `\\$var`.
+  Commandline creates missing folders itself.
 - **"Rendering failed: Out of memory" from Commandline** (verified 2027.0) while the GUI was
   rendering a sequence with Redshift: the GUI held ~23 of 24 GB VRAM and the Commandline Redshift
   log said "199 MB was available for Redshift". The GUI's log is
