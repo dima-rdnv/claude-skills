@@ -289,6 +289,13 @@ br.EnableElement(i, False)                                              # skip a
     `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet` — and `SetUseNet(job, False)` right after
     `AddFile` did NOT untick the Team column (the job rendered with Team Render: its log lists `.b3d` frames
     out of order). Ask the user to check the Team column before starting.
+  - **After a C4D restart the queue keeps its jobs but resets each job's take to Main** (with the
+    document's active render setting and its output path): a restored job rendered the wrong take into
+    another folder. After any restart, disable the old take jobs and add them fresh; read back each job's
+    `image_path` from `GetJsonJobs()` before starting.
+  - Redshift crash "ASSERT FAILED Scene.cpp … RSScene is locked" (Redshift disabled) on every machine at
+    the same frame = an RS Volume whose only loaded grid is all zeros (pure-emission fire after the burn):
+    `cinema4d-redshift` volumes section.
   - **Team Render jobs fail "Error – Saving Image" (before any client renders, 0–17 s) when ANY scene
     asset is missing** — even an unused, hidden Alembic Generator with another machine's path; the
     queue's `SetCheckTexture(False)` doesn't cover Team Render. Verified by elimination (frame rate,

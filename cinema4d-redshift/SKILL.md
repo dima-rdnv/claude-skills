@@ -192,6 +192,11 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
 - Velocity grids 12000–12002, velocity scale 12003; `13000 Channels` stays empty in c4dpy.
 - Check the render log (`C:\ProgramData\Redshift\Log\Log.Latest.N\log.html`): `Loading: ...vdb` and
   `Volume grids: N`.
+- **A volume whose only loaded grid is all zeros crashes Redshift** ("ASSERT FAILED Scene.cpp:1919
+  RSScene is locked", Redshift disabled, every machine, same frame): a pure-emission fire after the
+  burn (temperature/flame all 0 → pruned to one empty tile, log "Num voxels total: 64"). Fix: let the
+  material also read a grid that is never empty (`density_name = density`, `density = 0`) — look
+  unchanged (pixel-identical), crash gone (2 grids loaded).
 - **Pure-emission volumes need `density` = 0**: with no `density_name` the default density 1 fills the
   whole VDB bounding box (a black, alpha-1 box). Emission from a channel is strong — on a ×10 (cm)
   VDB, temperature × 0.6–1.0 / flame × 0.05 gave a fire about as bright as a Houdini GL glow of
