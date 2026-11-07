@@ -87,9 +87,12 @@ t.SetChecked(True)
   remove the clone's children before inserting it. Count the tree afterwards.
 - Render settings that should render at 30 fps from a 60 fps scene: `rd[5023] = False` (Use Project
   Frame Rate) and `rd[c4d.RDATA_FRAMERATE] = 30`; frame range as `c4d.BaseTime(frame30, 30)`.
-- **`$take` in the output path works in Commandline but NOT in the Render Queue** (C4D 2027): every
-  queued take job rendered its first frame and failed "Error – Saving Image", nothing written (the
-  queue log even showed the resolved path). Working layout: one parent render setting per shot and
+- **`$take` in the output path:** works in Commandline. In the Render Queue one scene's take jobs all
+  rendered their first frame and failed "Error – Saving Image", nothing written (C4D 2027) — yet in
+  another scene `…\$prj\$prj_$take_` and `…\$prj_$take\$prj_$take_` rendered through the queue with
+  Team Render and wrote `<prj>_<take>_####.exr` (2027.0, the folders already existed). The queue
+  doesn't create folders, so a `$take` *folder* that doesn't exist yet is the likely difference
+  (unverified). Safe layout regardless: one parent render setting per shot and
   quality (resolution, samples, range) with one **child per take** (a clone, named after the take,
   explicit path `.../<shot>/<take>/<take>`) — tidy in the list (the user found 23 top-level settings
   far too many), and a child clone keeps its own path (verified). Changing a file's render settings

@@ -279,7 +279,20 @@ br.EnableElement(i, False)                                              # skip a
     `(job, filename)` — called with the job alone they raise "Required argument 'filename'".
   - **Never call `br.SetRendering(c4d.BR_STOP)` from the bridge** — it deadlocked C4D (0% CPU, UI
     frozen, force quit needed). Ask the user to stop renders in the Render Queue window.
-  - **Don't loop on `DelFile`** — it did not remove a waiting job. Disable old jobs instead.
+  - **Don't loop on `DelFile`** — it did not remove a waiting job (2027.0: returns False, count
+    unchanged, also for disabled jobs). Disable old jobs instead, or ask the user to delete them.
+  - **Render missing frames without touching the take** (verified 2027.0, Team Render): child render
+    setting under the take's own setting that only narrows the frame range, then per job
+    `rds = br.GetAllRenderSettingsNames(job)`; `br.SetActiveRenderSettingsIndex(job, rds.index(name))`.
+    The Team Render `job.log` started at the child's first frame. Jobs keep the render setting by
+    index: after removing or reordering a file's settings, a queued job pointed at another one.
+  - **Two jobs with the same resolved output (same file and take) → "Incremental Image Name"**: the
+    later job's `image_path` gets `_i1`/`_i2` appended, and disabled jobs count too. Never accept it
+    (the frames leave the sequence): one job per take — widen the range instead of queuing two — and
+    check every `GetJsonJobs()` `message` before `BR_START`. The auto-renaming can be switched off in
+    C4D (a user did; where is not recorded here); jobs added afterwards came in clean.
+  - `br.SetRendering(c4d.BR_START)` from `exec_python` started a Team Render queue fine in a healthy
+    session (2027.0; the hang above was in a session where Redshift was already stuck).
   - Watch progress from a shell (output file size/mtime); bridge calls can block while a job loads.
   - **Queue calls load the scene file on C4D's main thread**: `AddFile`, `GetAllTakeNames`,
     `GetActiveTakeName`. With a heavy file (65 MB + 25 Alembic particle groups) 24 jobs took ~2 min
