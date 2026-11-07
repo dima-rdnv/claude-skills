@@ -33,7 +33,9 @@ button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` expo
 ## Installing / finding it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
   don't know ROOT, ask the user what the status line says. Old `done/` + `outbox/` files show
-  what earlier sessions did.
+  what earlier sessions did. On Windows ROOT is also in AE's prefs (verified 7 Nov 2026):
+  `%APPDATA%/Adobe/After Effects/<ver>/Adobe After Effects <ver> Prefs.txt`, section
+  `["Settings_ClaudeBridge"]`, key `"root"`; a heartbeat older than a few seconds = panel closed.
 - Install (verified AE 2026, Windows): `scripts/install.ps1` self-signs `panel/` with
   `ZXPSignCmd.exe` from `-SigningDir` (default `D:\WORK\Claude\premiere-bridge-signing`, shared
   with the Premiere bridge; CEP 12 refuses unsigned panels and ignores PlayerDebugMode), copies it
@@ -97,6 +99,10 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   that looks for comps by name; the unsaved state of the previous session is gone. Seen 4 Nov 2026:
   a fresh panel ran queued scripts against an empty Untitled project, then the heartbeat stalled
   until the user had the real project open and AE idle.
+- `app.project.file.name` is URI-encoded (`OXON%20261107%20v4.aep`): compare `File.decode(f.name)`.
+  Opening a project from a script (verified 7 Nov 2026): `app.beginSuppressDialogs(); app.open(file)`
+  then `endSuppressDialogs(false)` opened a 190-item project with 31 missing footage items in 11 s
+  without a dialog; `p.save(newFile)` straight after = Save-As before touching anything.
 - ExtendScript is ES3: unquoted `in` / `out` / `native` (any ES3 reserved word) as object keys fail
   with "SyntaxError: Illegal use of reserved word" — write `{"in": L.inPoint, "native": …}`.
 
@@ -168,6 +174,12 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   re-set `conformFrameRate` and `alphaMode` (EXR: `AlphaMode.PREMULTIPLIED`) after applying.
 - New EXR sequence (verified 5 Nov 2026, ACEScg 16 bpc project): `io = new ImportOptions(new
   File(first.exr)); io.sequence = true; p.importFile(io)` gives one item named `x_[0000-0242].exr`.
+- Pure-emission EXR passes (Redshift fire with density 0: RGB > 0, alpha 0 everywhere): import with
+  `alphaMode = AlphaMode.IGNORE` and put the layer in `BlendingMode.ADD` — shown correctly in the
+  comp (verified 7 Nov 2026). Premultiplied, an alpha-0 layer contributes nothing *(unverified)*.
+- Lower-res passes into a 4K comp: scale = 100 × compWidth / item.width (960 px → 400 %). Swapping
+  a 1920 px VP layer for a 3840 px source on a `duplicate()` + `replaceSource`: multiply its scale
+  by old.width / new.width; the copy keeps parent, masks and their keys (verified 7 Nov 2026).
 - **List the target comp's layers right before adding**: the user may have put their own plate in
   meanwhile (here a `.mov` with OCIO/Adj above it). Take the plate layer's anchor/position/scale for
   the CG layer and `moveBefore(plate)` instead of adding a second plate. A `.mov` reporting 30.124 fps
