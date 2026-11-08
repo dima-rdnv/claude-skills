@@ -63,6 +63,9 @@ sv.flipbook(vp, s)
 - Pass types built this way: a **multiply pass** (white = untouched, tint/char darker; straight-alpha
   PNG, Multiply in the compositor) and an **emission pass** (black = nothing; linear EXR, Add) — two
   ROPs on the same geometry with different Cd.
+- **Houdini 22 (Vulkan viewport): an OpenGL ROP in hython crashed on the 2nd frame** of a mesh whose
+  topology changes per frame (`GR_FillAttributesVK::createNormalAttribute`); the first frame always
+  rendered. Workaround: one hython process per frame (verified Nov 2026).
 
 ## Same camera as Cinema 4D (verified)
 - Map the world spaces first by comparing a few parts' bboxes in both apps. Seen: C4D → Houdini =

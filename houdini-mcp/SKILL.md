@@ -184,7 +184,10 @@ Mac install method not recorded (unverified).
 - The Alembic SOP's `usevisibility` (on by default) makes `unpack` drop objects that were hidden in
   the source app (CAD colliders, injector) — set it to 0 when you need them.
 - Unpack packed Alembic prims before using them as colliders; PolySoups → `convert` (or unpack's
-  `convertpolysoup`).
+  `convertpolysoup`). Or load unpacked directly: Alembic SOP `loadmode` = `"houdini"` (default
+  `"alembic"` = one packed point; point attributes like `width` only appear unpacked).
+- Alembic SOP time = `frame` parm / `fps` parm (default `$FF`, `$FPS`): with `fps` 30 a C4D Alembic's
+  frame N should land on Houdini frame N (C4D time N/30), not N+1 (unverified - compare a bbox).
 - **Check which parts animate before planning around them** — sample each part's bbox over time, and
   look for hidden static duplicates of the animated parts (e.g. `Valves/Hidden/...` next to the baked
   valves): blast the hidden copies. (An earlier note here said an engine bake had static valves —

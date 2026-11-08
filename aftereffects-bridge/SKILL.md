@@ -30,6 +30,9 @@ button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` expo
 **On macOS read `references/macos.md` first.** The CEP panel is verified there too, installed with
 `scripts/install.sh`; `install.ps1` is Windows-only.
 
+**The user's project layout** (ASSETS / COMPS / `_nested` / `_old`, OCIO + LUT adjustment layers,
+`Fxx | …` names, old layers off): `references/project-structure.md`. Follow it when adding things.
+
 ## Installing / finding it
 - When the user says "AE is running the bridge": the panel reads `Listening… (inbox: …)`. If you
   don't know ROOT, ask the user what the status line says. Old `done/` + `outbox/` files show

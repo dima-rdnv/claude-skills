@@ -102,6 +102,20 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
 - (unverified fix) RS Object tag 1999 = 1 + 2002 "Casts Shadows" = 0 did not stop a small emissive
   sphere's shadow in a preview; shrinking the object did.
 
+## Liquids and glass (verified look, C4D 2027 + RS, Nov 2026)
+- In the Standard Material, transmission takes its energy from the base (diffuse) layer: at
+  `refr_weight` 1.0 the Base Color does nothing. Partial transmission (0.3–0.8) over a coloured base
+  left 20–70 % of each droplet as a painted diffuse surface → it read as plastic. Clear liquid:
+  `refr_weight` 1, tint by absorption (`refr_color` reached at `refr_depth`, in scene units — set the
+  depth near the object size so small drops stay pale and big ones get the colour), IOR ~1.47.
+- Transparent passes composited over a bright background: a uniform white dome makes clear droplets
+  vanish (nothing to refract or reflect but white); a studio HDRI dome with camera contribution 0
+  (`dome[10042] = 0`) gives the highlights and dark refracted edges that make them read as liquid.
+- Cameras: use the `RS Camera` object (1057516). It also accepts the C4D camera parameters
+  (`CAMERA_FOCUS`, `CAMERAOBJECT_APERTURE`, `CAMERAOBJECT_FILM_OFFSET_X`); its own ids include bokeh
+  `8002`, f-number `1201`, focus distance `1010`, Offset X `13006` (which offset Redshift honours:
+  unverified).
+
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom
   objects, **5 Optimized Spheres**), 3001 Scale Multiplier (× the particle radius channel).

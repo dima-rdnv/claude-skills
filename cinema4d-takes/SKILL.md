@@ -15,6 +15,16 @@ only the differing render values. No scene copies, no full duplicate render sett
 asks for files. New generator/rig features must reproduce the old look at their default values, so
 Main keeps the old look and the take switches the new controls on.
 
+**Preferred scene setup (the user's standing convention, Nov 2026):** one parent take and one parent
+render setting per scene to set things up. Every shot / variant take is a child of that take, and
+every render setting is a child of that parent render setting (Redshift, colour management, format,
+multipass, shared resolution). Children change only what differs: camera, frame range, output path,
+objects on/off, materials. Cameras are Redshift cameras (`RS Camera`, type 1057516), not C4D cameras.
+Build children as clones of the parent without its children:
+`par.GetClone(c4d.COPYFLAGS_NO_HIERARCHY)`, then `doc.InsertRenderData(child, par, par.GetDownLast())`.
+`AddTake` inserts first, so create child takes in reverse order. Hide the other variant's objects with
+render + editor visibility overrides (value 1) rather than separate files.
+
 ## Child render settings from Python (verified C4D 2027.0, throwaway documents)
 - A `RenderData` inserted under a parent with `doc.InsertRenderData(child, parent, None)` reads the
   parent's values and keeps following later parent edits — as long as nothing writes to it.
