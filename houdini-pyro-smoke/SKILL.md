@@ -72,6 +72,16 @@ pyrosolver → attribwrangle (16-bit) → rop_geometry (.vdb)      file SOP (cac
   surface is projected away by the incompressible solver. Burning gas has to **expand**: `div_doadd` 1, `div_amount` ~1,
   `div_usecontrolfield` 1 on `flame`. It then keeps thickening (0.4 R at f36, past 1 R at f180 with `flames_lifespan` 0.25):
   pick a frame window or tune towards a steady state; measure mean `flame` in shells by radius (bbox of active voxels overstates).
+- **Steady state for long shots (verified 8 Nov 2026):** without a limit the flame reached 2 R by 2.8 s and 3 R by 5 s (32 M
+  voxels, 40 MB/frame). Fix: a confinement source — a fog VDB `confine` (vdbfrompolygons fog of a 2 R sphere at the object's
+  current centre, volumewrangle `@confine = 1 - smooth(1.35*R, 1.8*R, length(@P - c))`, 0 outside the VDB) merged into the
+  source input, plus pyrosolver sources 5/6: `source_volumeN` confine → `source_vfieldN` flame / temperature,
+  `source_voperatorN` 3 (Multiply; menu: copy, add, sub, mul, div, max, min, average, guide/Pull, blend, none),
+  `source_vnormalizeN` 0, `numsources` 6. With `flames_lifespan` 0.15, `div_amount` 1.0, control range 0.75–1 the extent held
+  at 1.7–1.8 R from 2.8 s on (r 1, 0.012 voxels: 221 frames in 11 min, ~24 MB/frame).
+- A moving / deforming source: Alembic of the animated object → `trail` (velocity) → scatter on the surface with `v` + `N`
+  transferred, add the surface velocity to the source `v`; the same SDF + `v` as the collider (`col_type` 1). Two variants
+  that only diverge late: sim one fully, start the other shortly before the split already lit (it settled in ~3 s).
 - VEX snippets: comments are `//` — a Python `#` comment broke the rasterize chain ("Invalid source …/switchif1").
 
 ## Running it

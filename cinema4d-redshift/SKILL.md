@@ -111,10 +111,15 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
 - Transparent passes composited over a bright background: a uniform white dome makes clear droplets
   vanish (nothing to refract or reflect but white); a studio HDRI dome with camera contribution 0
   (`dome[10042] = 0`) gives the highlights and dark refracted edges that make them read as liquid.
-- Cameras: use the `RS Camera` object (1057516). It also accepts the C4D camera parameters
-  (`CAMERA_FOCUS`, `CAMERAOBJECT_APERTURE`, `CAMERAOBJECT_FILM_OFFSET_X`); its own ids include bokeh
-  `8002`, f-number `1201`, focus distance `1010`, Offset X `13006` (which offset Redshift honours:
-  unverified).
+- Cameras: use the `RS Camera` object (1057516). It reads the C4D focal / aperture
+  (`CAMERA_FOCUS`, `CAMERAOBJECT_APERTURE`); its own ids include bokeh `8002`, f-number `1201` (max
+  256), focus distance `1010`. **It has no lens shift**: Film Offset is not in its description, and its
+  Offset X/Y `13006/13007` sit in the *Background* group (background-image offset).
+- Split screen that must zoom "as one picture" (both halves dolly towards the common screen centre):
+  per panel, move the camera sideways by `d0 · tan(a)` and turn it inward by `a = atan(0.5 · aperture /
+  focal)` (half the panel's FOV), then dolly along world Z. The panel's centre frames the subject at
+  distance d0, and the Z motion converges on the panel's inner edge. At long lenses the turn (1.4° at
+  750 mm, 6.8° at 150 mm) shows no visible keystone.
 
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom

@@ -31,6 +31,14 @@ finally:
   duplicated attribute tags (`____color____` next to `__color__`, c4dpy 2027) — the same mechanism as
   the GUI popup loop below. Verified Nov 2026: written from 0, sample N = 60 fps document frame N,
   counts matched Houdini at 6 checked frames.
+- **Alembic Generator `Offset` (1005, BaseTime) = the document time at which the cache's FIRST sample
+  plays**; it defaults to the cache's own start (a file starting at frame 1299 → Offset 1299). To play
+  source frame `b` at document frame `d`: `Offset = start + d − b` (verified 8 Nov 2026, C4D 2027,
+  points compared at 2 frames). Setting it to ±(d − b) pushed the time past the end → frozen last pose.
+  Several copies of one Alembic with different Offsets = the same animation out of step.
+- c4dpy checks of Alembic animation: evaluate each case in a freshly loaded document (first
+  `SetTime` + `ExecutePasses`); after a parameter change or an out-of-range time the generator kept
+  returning the old cache, and a document whose min time is later than the tested frame clamps it.
 - **An EMPTY sample keeps the previous particles** in a Particle Group (11 stray full-size droplets
   where the file had 0 points; 22 before the first non-empty sample). Fix in Houdini: when a frame has
   no points add one dummy point far away with `width` 0 (invisible in Redshift).
