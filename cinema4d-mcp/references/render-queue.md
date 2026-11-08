@@ -79,3 +79,10 @@ br.EnableElement(i, False)                                              # skip a
 - An `exec_python` that loads several heavy files into the queue hits the MCP adapter's 30 s dispatch timeout, but the handler keeps
   running and finishes (holding C4D's main thread for minutes) — never resend it; read the queue afterwards.
 - Single-frame jobs write `name.exr` without a frame number; a frame range writes `name.####.exr`.
+- **Team Render tails (2027, Nov 2026):** a slow client (~22 s/frame vs 1–3 s locally) took the last frames of jobs and held them
+  7 min and 50+ min; the queue waits for them before the next job. For deadline renders switch `SetUseNet` off or render locally
+  with Commandline; switching waiting rows off with `EnableElement(i, False)` while the queue renders was safe.
+- **Commandline `CRITICAL: Stop [ge_container.h(440)]`**: thousands of these lines right after "Loading Project" are noise for some
+  scenes (renders that worked printed 1 700–9 100). Under full CPU load from other processes (two pyro sims in hython) loading slowed
+  from seconds to many minutes and looked like a hang — check CPU, lower the other processes' priority
+  (`(Get-Process hython).PriorityClass = 'BelowNormal'`) before killing anything.
