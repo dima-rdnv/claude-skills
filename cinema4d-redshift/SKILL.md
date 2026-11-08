@@ -87,6 +87,10 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   pinhole projection with focal and the horizontal aperture (sensor.x for Fit Horizontal) matched
   the render to 1 px. Replace a standard camera: copy Mg, focal, aperture → `[500]`, `[7002]`,
   then set it on the BaseDraw and the Main take.
+- Copying a scene's camera rig for a new shot (verified 8 Nov 2026): a **Protection tag (5629)** on the camera pins its
+  position — `SetRelPos` x/y were back at 0 after evaluation (the copy looked at the wrong place); remove it on the copy. Also
+  clear `[1130]` focus object and `[8002]` bokeh when the new framing is much longer (f/4 at 750–1050 mm blurred everything);
+  the focus-distance track needs the DescID from `GetDescription` (a hand-built `DescLevel(1010)` CTrack failed).
 - **Hair-thin lines (~1 px)**: 1 px at distance z is z · aperture / (focal · width_px). Sweeps with a
   0.018–0.02 cm square profile at 250–490 cm (100 mm, 36 mm gate, 1920 wide) rendered as crisp
   ~1 px lines; emission-only weight 6–8 keeps them bright after anti-aliasing (preview quality).
@@ -226,6 +230,19 @@ res = c4d.documents.RenderDocument(doc, rd.GetDataInstance(), bmp, c4d.RENDERFLA
 - Commandline renders (outside the GUI, the safe way to test): `Commandline.exe
   g_licenseModel=LICENSEMODEL::MAXONAPP -render scene.c4d -take <name> -frame 456 456 -oimage <path>`.
   Two Redshift renders on one GPU at once → "Rendering failed: Out of memory"; run them one by one.
+  **`-frame a b` counts DOCUMENT frames**: in a 60 fps scene rendered at 30 fps (render setting frame rate 30) `-frame 711 778`
+  rendered 30 fps frames 355–389 (named 0355…); pass `-frame 2a 2b` (verified 8 Nov 2026, C4D 2027). In a sequence, Commandline
+  loads the scene once: frames took 2–10 s where single-frame tests reported 7–30 s.
+  Bash: build the `-oimage` path with `cygpath -w "$dir/$name"` in one piece — `"...\${var}"` inside double quotes left the
+  variable unexpanded ("Files cannot be written - please check output paths!"). The same message came from a new render setting
+  with multi-pass saving left on and no path (`RDATA_MULTIPASS_ENABLE` / `_SAVEIMAGE` = False).
+- **Glossy liquid particles in an unlit (all lights off) take** (verified 8 Nov 2026): RS Standard (IOR 1.47, roughness 0.04,
+  transmission 0.8 golden) lit by a studio-HDRI dome that is on only in those takes (camera contribution 0). A matte holdout on
+  the surrounding geometry still shadows the dome and shows black in reflections/refractions (the droplets came out brown):
+  in those takes override the holdout's RS Object tag visibility 2002 casts shadows, 2005 AO, 2006 reflections, 2007
+  refractions, 2010 GI = False — it stays a matte for the camera.
+- An RS Volume scaled ×100 (Houdini metres → cm) adds emission up ×100 along the ray: scale the material's emission down by the
+  same factor. Six RS point lights at intensity 60 000 around a 1 m object gave values ~50; 4 was right.
 
 ## Verified dead end: per-particle colour on Alembic Particle Groups
 - Positions and radius render, but colour does not reach Redshift: Vertex Attribute Lookup `__cd__`

@@ -80,6 +80,10 @@ t.SetChecked(True)
 - Wrap edits in undo. Takes are document data, so don't create or delete takes in a user's scene
   unless asked.
 - `AddTake` inserts the new take as the FIRST child, so a loop creates them in reverse order.
+- `td.AddTake(name, parent, cloneFrom)` with a source take **ignores `name`**: the clone is called like the source
+  (`v4F04_RS_fuel`, then `v4F04_RS_fuel.1`) — `t.SetName(name)` afterwards (Commandline then said "No take present").
+  The clone copies the source's override groups: list members with `og.GetObjectsInGroup()` (not `GetChildren()`), swap them with
+  `og.RemoveFromGroup(td, o)` / `og.AddToGroup(td, o)` (verified 8 Nov 2026).
   Reorder with `t.Remove(); t.InsertUnderLast(parent)` — camera and render data stay assigned (verified).
 - **Render settings: `rd.GetClone()` copies the child render settings too.** Cloning a parent setting
   once per shot to make its children nested each new clone under the previous ones — 12 shots gave

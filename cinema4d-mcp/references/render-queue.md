@@ -61,3 +61,18 @@ br.EnableElement(i, False)                                              # skip a
   create `<shot>/<take>/` folders before starting. **"Error – Missing Files"** also flags absolute
   paths from another machine (`/Users/...`) that `GetAllAssetsNew` resolves by name: relink them
   project-relative (`tex/...`), or `SetCheckTexture(False)` when the missing files are unused.
+- **"Error – Invalid Output Multi-Pass Path"** (verified 8 Nov 2026, C4D 2027) although the job's render setting has
+  multi-pass and its saving off: the queue validates the **multi-pass filename** (`RDATA_MULTIPASS_FILENAME`), and also that of the
+  document's **active** render setting — an old relative `./C:/Other/...` path from another machine refused the job. Give every
+  render setting of the copy a valid multi-pass filename and make the job's setting the active one.
+- **"Error – Missing Files" can be transient**: jobs of a heavy file showed it right after `AddFile` (while C4D was still loading
+  the files) and then rendered normally when the queue reached them (re-checked at job start; `GetAllAssetsNew` reported nothing
+  missing). Check with c4dpy before believing it; `SetCheckTexture(False)` for the queue's own check.
+- `BatchRender.DelFile(i)` returned False and removed nothing (2027, queue idle) — rows can only be switched off
+  (`EnableElement(i, False)`). A new row whose output path equals an old row's (even an errored, disabled one) gets the
+  **auto-renamed `_i1` path** ("Incremental Image Name"): give re-queued jobs a new output path instead.
+- Disabling only `"In Queue"` rows is not enough to keep the user's jobs from running: a **"Stopped"** row stays enabled and the
+  queue resumes it after yours. Disable both, record them, re-enable afterwards (`GetEnableElement(i)` reads the state).
+- An `exec_python` that loads several heavy files into the queue hits the MCP adapter's 30 s dispatch timeout, but the handler keeps
+  running and finishes (holding C4D's main thread for minutes) — never resend it; read the queue afterwards.
+- Single-frame jobs write `name.exr` without a frame number; a frame range writes `name.####.exr`.

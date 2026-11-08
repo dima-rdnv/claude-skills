@@ -67,6 +67,13 @@ pyrosolver → attribwrangle (16-bit) → rop_geometry (.vdb)      file SOP (cac
 - Flames / glow: rasterize `temperature` and `burn` too; pyrosolver source 2 (temperature, Pull) and
   source 3 (`burn` → `flame`, Maximum); `flames_lifespan` sets how long flame persists.
 
+## Flame envelope around an object (verified 8 Nov 2026, Houdini 22)
+- A burning sphere surface (radial source `v`, buoyancy 0) gave only a 0.09 R skin of flame: a divergent outflow from a closed
+  surface is projected away by the incompressible solver. Burning gas has to **expand**: `div_doadd` 1, `div_amount` ~1,
+  `div_usecontrolfield` 1 on `flame`. It then keeps thickening (0.4 R at f36, past 1 R at f180 with `flames_lifespan` 0.25):
+  pick a frame window or tune towards a steady state; measure mean `flame` in shells by radius (bbox of active voxels overstates).
+- VEX snippets: comments are `//` — a Python `#` comment broke the rasterize chain ("Invalid source …/switchif1").
+
 ## Running it
 - Never display `pyrosolver` in the GUI (a frame jump makes it re-simulate from `startframe`; see
   `houdini-mcp`). Display the cache reader.

@@ -137,3 +137,10 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
    in a public repo keep personal names and client details out of the text. Tell the user in one line
    what changed.
+
+## Alembic meshes into a new scene (verified 8 Nov 2026, C4D 2027)
+- `c4d.BaseObject(1028083)` + `[c4d.ALEMBIC_PATH] = path` renders **nothing**: the object identifier inside the file is not set.
+  Import through the importer instead (`MergeDocument(doc, path, SCENEFILTER_OBJECTS)`), collect the new top-level objects (by
+  GUID) and move them under your own null; scale that null (×100 for Houdini metres). The leaf is an Alembic Generator.
+- C4D primitive axes are easy to get backwards (the Hemisphere's dome, a Disc's normal): for a cut-away object build the mesh in
+  Houdini (clip + polyfill, cap grouped by normal) and import it; then soot/smoke emitted from the same plane in Houdini lines up.
