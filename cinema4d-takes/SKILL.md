@@ -240,6 +240,21 @@ print(br.GetActiveRenderSettingsName(n))                   # -> the take's rende
   trust the take, not that index.
 - Save the file before adding the jobs; each job loads the file from disk when it starts.
 
+## Split a shot into passes so parts can be re-rendered alone (verified 2027.0, Redshift)
+- Under each shot/camera take, one child take per pass; the shot take keeps camera, overrides and its
+  render setting (e.g. a range child "0-417"), the passes inherit them and only add an override group:
+  - **background pass** ("1_Globe"): `og.AddToGroup(td, fg_group)`, `og.SetEditorMode(c4d.MODE_OFF)`,
+    `og.SetRenderMode(c4d.MODE_OFF)`;
+  - **foreground pass** ("1_Sats"): an override group holding the occluder (here the Earth group) with
+    `tag = og.AddTag(td, 1036222, None)` (RS Object tag) and matte `tag[4999] = True; tag[4000] = True;
+    tag[4004] = 0.0; tag[4001] = False` — one tag on the parent group is enough even though its children
+    carry their own RS Object tags (they don't override matte).
+- Proof with Commandline `-take <pass> -frame N N -oresolution 960 540`: the background pass had no
+  satellites/orbits, the foreground pass showed them cut where they pass behind the globe and kept
+  where they cross in front; foreground "over" background looked like the combined render.
+- With `$take` only in the file name (`…\$prj\$prj_$take_`) the passes land next to the existing frames
+  as `<prj>_<pass>_####` — no new render settings needed beyond the shot's range child.
+
 ## Working with a rig that has takes
 - Rig controls that differ per take (path index, colours, sizes) belong in take overrides on the
   control null's user data, not in duplicated rigs.

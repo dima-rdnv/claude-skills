@@ -282,6 +282,10 @@ br.EnableElement(i, False)                                              # skip a
   document that wasn't the active one.
 
 ## Keys from Python (verified C4D 2026)
+- 2027.0: the CKey **getters** take no curve argument (`k.GetInterpolation()`, `k.GetTimeLeft()`,
+  `k.GetValueLeft()`, …; passing the curve raises "takes no arguments (1 given)"), the setters still do.
+  Slowing an animation ×4 = multiply every key time and tangent time by 4 (keep values); verify with
+  `tr.GetValue(doc, BaseTime(f), fps)` against the old track at f/4 before saving.
 - Explicit tangents on a spline key: clear `NBIT_CKEY_AUTO` (and `NBIT_CKEY_CLAMP`), set
   `NBIT_CKEY_BREAK`, then `key.SetTimeLeft(curve, c4d.BaseTime(-h/3, fps))`, `SetValueLeft(curve, -s*h/3)`,
   `SetTimeRight` / `SetValueRight` (offsets from the key). Slope `s` is value per frame; `h` = gap to

@@ -93,6 +93,10 @@ second, so a file grabbed while still being written fails too. `send.sh` needs `
 macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
 
 ## Traps hit in practice
+- **Importing an image sequence with missing frames opens a modal warning that blocks the script**
+  (verified 9 Nov 2026): `send.sh` timed out, heartbeat `aeWaiting` kept rising, AE "responding" at 0 %
+  CPU with a `#32770` window owned by AfterFX (its text is not readable from outside). Ask the user to
+  click it; the script then finishes. AE shows the missing frames as colour bars with the file name.
 - **No backslashes in bridge scripts**: a script with `/\/g` failed with "SyntaxError: Unterminated
   string constant" at that line (the bridge's handling mangles them). Match paths with
   `File.fullName` (forward slashes, e.g. `/d/WORK/...`) instead of `fsName`.

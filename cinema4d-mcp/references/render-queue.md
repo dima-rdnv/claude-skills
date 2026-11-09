@@ -16,7 +16,11 @@ br.EnableElement(i, False)                                              # skip a
   `BR_START` again — the errored job re-ran and finished (verified C4D 2026, macOS).
 - `GetAllTakeNames(job)` lists the takes in `SetActiveTakeIndex` order (depth-first, `Main` = 0).
   The getters `GetActiveTakeIndex` / `GetActiveTakeName` / `GetActiveCameraName` take
-  `(job, filename)` — called with the job alone they raise "Required argument 'filename'".
+  `(job, filename)` — called with the job alone they raise "Required argument 'filename'". In another
+  2027.0 session the same getters accepted only `(job)` ("takes at most 1 argument") — try both.
+- "Incremental Image Name" came back after a C4D restart although the user had switched the
+  auto-renaming off before: a half-added job from a failed script made the next identical job `_i1`.
+  Disable it, have the user delete the extra rows, re-add, re-check every `message`.
 - **Never call `br.SetRendering(c4d.BR_STOP)` from the bridge** — it deadlocked C4D (0% CPU, UI
   frozen, force quit needed). Ask the user to stop renders in the Render Queue window.
 - **Don't loop on `DelFile`** — it did not remove a waiting job (2027.0: returns False, count
