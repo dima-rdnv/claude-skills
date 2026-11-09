@@ -44,8 +44,9 @@ button, a status line showing the inbox, and a log. `$.global.ClaudeBridge` expo
   with the Premiere bridge; CEP 12 refuses unsigned panels and ignores PlayerDebugMode), copies it
   to `%APPDATA%\Adobe\CEP\extensions\com.claude.aebridge`, and removes the old ScriptUI panel
   (`ClaudeBridge.jsx` in AE's ScriptUI Panels folders) so two bridges never share an inbox.
-  `-ShareTo <dir>` also writes the signed copy colleagues install (they copy that folder into their
-  CEP extensions folder; Mac: `~/Library/Application Support/Adobe/CEP/extensions/`). AE finds new
+  `-ShareTo <dir>` also writes the signed copy Windows colleagues install (they copy that folder into
+  `%APPDATA%\Adobe\CEP\extensions\`; on a Mac that copy passed `-verify` but AE didn't load it, so
+  Mac users run `install.sh`). AE finds new
   extensions only at start-up: restart, Window › Extensions › Claude Bridge, dock it.
 - Install (verified AE 2026, macOS): `scripts/install.sh` does the same with Adobe's macOS
   `ZXPSignCmd` from `~/.claude/cep-signing`; details in `references/macos.md`.
@@ -102,7 +103,7 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   that looks for comps by name; the unsaved state of the previous session is gone. Seen 4 Nov 2026:
   a fresh panel ran queued scripts against an empty Untitled project, then the heartbeat stalled
   until the user had the real project open and AE idle.
-- `app.project.file.name` is URI-encoded (`OXON%20261107%20v4.aep`): compare `File.decode(f.name)`.
+- `app.project.file.name` is URI-encoded (`My%20Project%20v4.aep`): compare `File.decode(f.name)`.
   Opening a project from a script (verified 7 Nov 2026): `app.beginSuppressDialogs(); app.open(file)`
   then `endSuppressDialogs(false)` opened a 190-item project with 31 missing footage items in 11 s
   without a dialog; `p.save(newFile)` straight after = Save-As before touching anything.
