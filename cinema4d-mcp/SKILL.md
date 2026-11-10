@@ -128,6 +128,10 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
   the token file — recipe and reply format in `references/shell-relay.md`.
 - "Is C4D stuck, should I restart?": process/main-thread checks, RS log, the Team Render `job.log`
   that shows a job still rendering behind a "Not Responding" window → `references/is-c4d-stalled.md`.
+- Inventory a scene, find which objects are a given product, check what each camera sees, or cut one
+  model out into a clean file with its textures (`SaveProject` traps, `is` vs `==`) →
+  `references/scene-inventory-and-asset-extraction.md` + `scripts/c4d_scene_dump.py`,
+  `c4d_camera_visibility.py`, `c4d_extract_asset.py`.
 
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash
