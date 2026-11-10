@@ -132,6 +132,9 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
   model out into a clean file with its textures (`SaveProject` traps, `is` vs `==`) →
   `references/scene-inventory-and-asset-extraction.md` + `scripts/c4d_scene_dump.py`,
   `c4d_camera_visibility.py`, `c4d_extract_asset.py`.
+- Model hardware from a reference image with code (kit of parts + instances, perforated panels with
+  real full holes via spline + Extrude, decals, camera matching, compare renders) →
+  `references/procedural-hard-surface.md`.
 
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash

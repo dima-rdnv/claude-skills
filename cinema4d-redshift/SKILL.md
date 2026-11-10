@@ -121,6 +121,24 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   distance d0, and the Z motion converges on the panel's inner edge. At long lenses the turn (1.4° at
   750 mm, 6.8° at 150 mm) shows no visible keystone.
 
+## Fast render settings — the default to start from (user's practice; ids verified C4D 2027.0)
+Most shots need far less than Redshift's defaults; lower settings render faster **and** cleaner:
+- **GI: brute force, 2 bounces.** **Trace depths: lower** (defaults combined 6 / reflection 4 /
+  refraction 6 / transparency 16 / volume 1 — e.g. 4 / 3 / 3 / 6 / 1; raise refraction only for glass
+  and liquids). **Unified sampling: raise the adaptive threshold** (default 0.01; 0.03 used for
+  previews). **Denoise: OIDN on.**
+- Ids on the Redshift videopost (`BaseVideoPost(1036219)`), **Advanced** mode (`[60000] = 1`):
+  GI on `7005`, primary engine `7001` (4 Brute Force, 3 Irradiance Cache), secondary `7002`
+  (4 Brute Force, 2 IPC), GI trace depth `7006`; trace depths combined `5003`, reflection `5001`,
+  refraction `5002`, transparency `5004`, volume `5005`; unified sampling min/max/threshold
+  `1101`/`1102`/`1103`; denoise enabled `2006`, engine `2007` (4 OIDN, 3 OptiX, 1/2 Altus).
+- **A Python-created videopost starts in Basic mode** (`[60000] = 0`), which has its own controls:
+  bucket quality `60001`, threshold `60002`, denoise `60008` + engine `60009` (4 OIDN), GI `60015`,
+  depths combined `60003` / reflection `60005` / refraction `60006` / transparency `60004`
+  (`600xx` live-mode copies exist too). Set `[60000] = 1` before writing the classic ids.
+- `7006` (GI depth) and `7003` (secondary bounces) are linked: secondary = depth − 1. Set only `7006`
+  (= 2 for two bounces); writing `7003 = 2` afterwards pushed `7006` back to 3.
+
 ## Lights, textures and render speed (verified C4D 2027.0 + RS, Windows, Nov 2026)
 - **Native C4D lights rendered black** in a Commandline Redshift render (only emissive materials
   showed). Use RS Light objects (1036751): `[10000]` type (0 Infinite, 1 Point, 2 Spot, 3 Area,
