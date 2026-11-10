@@ -99,7 +99,7 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   click it; the script then finishes. AE shows the missing frames as colour bars with the file name.
 - **No backslashes in bridge scripts**: a script with `/\/g` failed with "SyntaxError: Unterminated
   string constant" at that line (the bridge's handling mangles them). Match paths with
-  `File.fullName` (forward slashes, e.g. `/d/WORK/...`) instead of `fsName`.
+  `File.fullName` (forward slashes, e.g. `/<drive>/<folder>/...`) instead of `fsName`.
 - Multilayer (single-part) EXR sequences from Unreal: `canImportAs(COMP_CROPPED_LAYERS)` says true, but
   the import came back as one footage item — the extra layers stay inside (EXtractoR), so ship mattes as
   their own image sequence.

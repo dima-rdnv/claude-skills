@@ -2,8 +2,8 @@
 # send.sh NAME [TIMEOUT_S]
 # Stages $STAGE/NAME.jsx into the Premiere bridge inbox atomically and waits for outbox/NAME.json.
 #   STAGE  folder where scripts are written (default: current dir)
-#   BRIDGE bridge root (default: /d/WORK/Claude/premiere-bridge)
-STAGE="${STAGE:-.}"; BRIDGE="${BRIDGE:-/d/WORK/Claude/premiere-bridge}"; n="$1"
+#   BRIDGE bridge root, required (the folder holding inbox/ and outbox/)
+STAGE="${STAGE:-.}"; BRIDGE="${BRIDGE:?set BRIDGE to the bridge root (the folder holding inbox/ and outbox/)}"; n="$1"
 rm -f "$BRIDGE/outbox/$n.json"
 # write under a non-.jsx name first, then rename: the bridge globs *.jsx every second and
 # would otherwise run a half-written (often empty) file
