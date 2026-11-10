@@ -121,6 +121,24 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   distance d0, and the Z motion converges on the panel's inner edge. At long lenses the turn (1.4° at
   750 mm, 6.8° at 150 mm) shows no visible keystone.
 
+## Lights, textures and render speed (verified C4D 2027.0 + RS, Windows, Nov 2026)
+- **Native C4D lights rendered black** in a Commandline Redshift render (only emissive materials
+  showed). Use RS Light objects (1036751): `[10000]` type (0 Infinite, 1 Point, 2 Spot, 3 Area,
+  4 Dome, 5 IES, 6 Portal, 7 Sun), area `[11004]` intensity, `[11022]` exposure, `[11005]` units,
+  `[11016]/[11017]` size, `[11014]` normalize; dome `[12024]` intensity; `[10042]` camera visibility.
+  Area lights shine along their +Z (aim like a C4D light). 3 area lights (intensity 2–6, 80–200 cm)
+  + a dome at 0.25–0.6 (camera 0) lit a product row in cm scale.
+- `texturesampler` exposes only `.outcolor` (no alpha output): drive `opacity_color` from a separate
+  grey mask texture. Its `.scale` is a 2D vector and Python 2027 has no `maxon.Vector2d` — tile by
+  writing UVs at true size (u = x / tile_width) instead.
+- RS videopost `[1101]/[1102]` = min/max samples (a new BaseVideoPost had 4/16).
+- **Shared GPU**: the same take rendered in 20 s, then took minutes (2 % after 150 s) while other apps
+  (compositor, encoder, DCCs) held 22 of 24 GB VRAM. Check `nvidia-smi` before blaming the scene;
+  keep test frames small and few.
+- Stopping a background shell loop that runs Commandline (the harness's task stop) left the bash loop
+  and `Commandline.exe` running on Windows: find them (`ps -ef | grep <script>`, `tasklist`) and end
+  your own processes explicitly, or the next GPU job competes with an orphan.
+
 ## RS Object tag (plugin 1036222)
 - Particles: override 2999, mode 3000 (0 Disabled, 1 Point, 2 Sphere, 3 Quad instances, 4 Custom
   objects, **5 Optimized Spheres**), 3001 Scale Multiplier (× the particle radius channel).
