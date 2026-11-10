@@ -21,10 +21,50 @@ Building rack-mount hardware (switches, servers) from a reference photo/render w
    60 mm fan, handle for that pocket, a separately built left-hand ear); instances stay at scale 1.
    After a build, audit every object's `GetRelScale()` in both documents.
 4. Render from a saved file with Commandline (never inside the GUI on 2027), compare against the
-   reference: composite on the reference's background colour, crop both to their object bbox, scale to
-   one width, stack + 50 % overlay. Match the camera from the reference's perspective first:
-   the ratio of the top's back-edge width to the front width gives the distance
-   (`w_back / w_front = d / (d + depth)`), the projected top height gives the camera height.
+   reference: composite on the reference's background colour, stack + 50 % overlay. Match the camera
+   exactly first (next section) and compare 1:1 at the reference's aspect. Cropping both images to
+   their object bbox and rescaling hid a wrong camera distance (back/front width 0.73 against the
+   reference's 0.645). Features placed with that camera were up to 6 cm off on the top surface.
+5. A kit part missing in a device document: `GetClone()` it, then point each texture tag at the
+   device document's material of the same name (clone the material across if it is missing). A bare
+   clone keeps its tags linked to the kit document's materials.
+
+## Exact camera match for product renders (level camera + lens shift)
+- Product renders are usually shot with a **level camera and lens shift**: the panel's vertical edges
+  stay parallel (equal panel width at its top and bottom row). A tilted camera can't reproduce that.
+- From the reference (pixels): front width `Wf` → `s = Wf / panel width` (px/cm at the front plane);
+  back-edge width `Wb` → distance to the front plane `d = depth · Wb / (Wf − Wb)`; `f_px = s · d`;
+  top front edge row `y_f`, back edge row `y_b` → camera height above the top
+  `h = (y_f − y_b) / (s · (1 − d / (d + depth)))`; eye-level row `y_c = y_f − s · h` (above the frame
+  when the camera looks down on the object).
+- C4D camera: focal = `f_px · aperture / image width`, at height (top + h), distance d, no rotation;
+  `CAMERAOBJECT_FILM_OFFSET_Y = (image_height / 2 − y_c) / image_height`. **The Y offset is a fraction
+  of the frame height** (verified 2027.0 by rendering: the width-based value moved the image 0.56× as
+  far). A positive value brought a subject below eye level up into the frame; the wrong sign rendered
+  an empty frame. Redshift honours the standard camera's film offset. One test render gave a bbox
+  within 2 px of the reference at 1280 wide.
+- Positions on the top surface from pixels (e = eye height above the surface):
+  `z = f_px · e / (y − y_c) − d`, `x = (x_px − x_c) · (d + z) / f_px`.
+- Checking a detail: a second camera at the same position, focal × k, aimed at the detail. Compare
+  it with the reference window of width `image_width / k` around the detail's projected point
+  `(x_c + f_px·x/(d+z), y_c + f_px·e/(d+z))`, upscaled. Same eye point, so it matches almost 1:1.
+
+## Details that read wrong until fixed
+- **Port cages are ganged**: one stamped 1×N / 2×N part fills each panel opening, with shared walls
+  and thin bright front edges. Single cages, each with its own rim, put a thick frame around every
+  port with panel showing between. Build the ganged part at true size (width = N · pitch, inner
+  walls ~0.6 mm).
+- What shows through an opening is the **nearest surface behind it**: comb windows stayed grey after
+  blackening the comb's backing, because the band divider's front face sat in front of the backing.
+- Product views 5–7° above the top hide anything below the near lip of a recess: handle hardware in
+  a top pocket shows only where it reaches the cover level.
+- Brightness: compare mean sRGB of matching plain regions (front, top) in the 1:1 render. A chassis
+  albedo of 0.15 rendered ~1.5× darker (linear) than a white-studio reference; 0.21 came within ~5 %.
+- Small printed symbols (warning stickers): draw them 8× larger with PIL and downsample with LANCZOS
+  into the decal. The symbol's own mask clips strokes that overrun its outline.
+- Reference images saved as `.jpg` from websites can be AVIF (`file` reports "ISO Media, AVIF
+  Image"), and Pillow raises `UnidentifiedImageError`. Use `uv run --with pillow --with
+  pillow-avif-plugin` and `import pillow_avif`.
 
 ## Perforated panel with real, full holes (spline + Extrude)
 - Real punched panels end every perforated region on **whole** holes (stepped edges on offset rows) —
