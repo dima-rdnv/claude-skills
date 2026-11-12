@@ -142,6 +142,23 @@ Building rack-mount hardware (switches, servers) from a reference photo/render w
   bottom of that U. Holes cut through the ear (spline + Extrude, see above) render see-through, which
   is the cue that sells the part at product distance. Build left and right ears as separate parts
   instead of mirroring one with a −1 scale.
+- **Bolt rack devices in.** Empty ear slots read as unfinished in close-ups.
+  - **Screw:** an M6 rack screw, two per ear (the outer slots of a 1U or 3U ear, both slots of a 2U
+    ear). Pan head Ø 11 mm × 3.2 mm with a 1.2 mm fillet, a Phillips cross (two 4.6 × 0.9 mm bars,
+    dark), and a black nylon cup washer Ø 13 × 0.8 mm, seated on each ear's own front face. It read
+    clearly at 3–4 m in a 2884 px frame.
+  - **Find the slots in a baked mesh** without the source splines: Extrude caps are n-gons whose holes
+    join the outline through cut edges, so boundary loops don't separate the holes. Take the points of
+    the ear's front face (|x| beyond the chassis, z at that ear's minimum) that lie well inside the
+    plate outline, and cluster them by height: each cluster is a slot contour, its bbox centre the
+    slot centre. Left and right ears can have different front z.
+  - **Add parts to a baked multi-material mesh:** `ResizeObject(np + n, nq + m)` keeps the existing
+    data; append the points and polygons, add the new polygon indices to the existing material
+    selection tags (no new texture tags), and rebuild the UVW tag at the new size (copy the old
+    `GetSlow`/`SetSlow` data, insert the new tag in its place). Put a named Annotation tag on the mesh
+    so a re-run skips it.
+  - Cylinder cap fillet ids in 2027: `PRIM_CYLINDER_FILLET`, `PRIM_CYLINDER_FILLETRADIUS`,
+    `PRIM_CYLINDER_FSUB` (there is no `..._FILLETSUB`).
 - Small round light pipes read as part of the cage when they use the cage metal, not a grey plastic.
 - 3/4 product shots of the finished devices (HDRI reflections, one key, camera framing): see
   `cinema4d-redshift/references/product-shot-lighting.md`.
