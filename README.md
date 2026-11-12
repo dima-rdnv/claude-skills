@@ -29,13 +29,13 @@ hold that knowledge. Each one was written during real production work and grows 
 The skills also cover the hand-offs between apps:
 
 ```mermaid
-flowchart LR
-  VO["Voice-over"] -- "word timings in frames" --> AE
+flowchart TB
   H["Houdini"] -- "Alembic, VDB" --> C4D["Cinema 4D + Redshift"]
   C4D -- "camera" --> H
-  H -- "GL passes" --> AE["After Effects"]
-  C4D -- "renders, 3D camera and nulls" --> AE
   C4D -- "LED wall rig" --> UE["Unreal Engine"]
+  C4D -- "renders, 3D camera and nulls" --> AE["After Effects"]
+  H -- "GL passes" --> AE
+  VO["Voice-over"] -- "word timings in frames" --> AE
 ```
 
 ## The skills
