@@ -12,6 +12,19 @@ br.EnableElement(i, False)                                              # skip a
 - Status codes (`c4d.RM_*`): 1000 PROGRESS, 1001 FINISHED, 1002 STOPPED, 1003 ERROR, 1004 ERROR2,
   1005 PAUSED, 1006 QUEUE, 1007 PROGRESS_WITH_WARNING, 1008 NONE. `br.GetJsonJobs()` gives every
   job's status, message ("Error - Missing Files"), progress and output path — read errors there.
+  In 2027.0 it returns a **Python list of dicts**, not a JSON string (`json.loads` fails); keys include
+  `status`, `message`, `progress`, `image_path`, `total_frames` (= last frame + 1), `outputwidth/height`.
+- **Several frame spans of one take without the `_i1` rename** (verified 2027.0, queue level): give the take's
+  render setting children that change only the frame range **and the file prefix** (`…_s2`, `…_s3`), one job
+  per child via `SetActiveRenderSettingsIndex`; `image_path` came back with each prefix and no `_i1`. Rename the
+  span files to one sequence afterwards.
+- **No API moves rows.** To change the order, switch the rows that should wait off (`EnableElement(i, False)`,
+  safe while the queue renders) and switch them back on once the queue is idle, then `BR_START`. Re-adding them
+  at the end would give their output the `_i1` rename (the disabled rows still count).
+- **A Team Render client without an activated Redshift licence** (verified 2027.0): it downloads the assets, takes
+  a frame, then its `job.log` lines read `Redshift Error: Maxon licensing error: License not activated (9)`,
+  `No devices available`, `Render-Job failed`, and the server renders on alone. Count frames per machine in
+  `job.log` (`<machine>: Rendering frame N`) a few minutes after `BR_START` before trusting a Team Render estimate.
 - **"Error - Missing Files" although every texture resolves:** `br.SetCheckTexture(False)`, then
   `BR_START` again — the errored job re-ran and finished (verified C4D 2026, macOS).
 - `GetAllTakeNames(job)` lists the takes in `SetActiveTakeIndex` order (depth-first, `Main` = 0).
