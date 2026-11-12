@@ -12,17 +12,6 @@ hold that knowledge. Each one was written during real production work and grows 
   and OS it was tested on. Anything else is marked *(unverified)*.
 - **Dead ends included.** Approaches that failed are written down with the reason, so Claude doesn't
   try them again.
-- **No project data.** Client names, paths and shot details stay in private project notes
-  ([project-notes](project-notes/SKILL.md)). The skills keep only what carries over to the next job.
-
-### What you can ask
-
-- *"Turn these POP particles into liquid blobs and bring them into Cinema 4D with their colours."*
-- *"Make a take for each colour variant and render them all through the Render Queue."*
-- *"The camera solve stops at frame 183. Extend it to the end of the shot."*
-- *"Put the camera on a rail and render one Movie Render Queue job per LED wall."*
-- *"Retime these After Effects keys to the voice-over."*
-- *"Relink this Premiere project to the transcoded MP4s and prove nothing changed in the cut."*
 
 ### Hand-offs between apps
 
