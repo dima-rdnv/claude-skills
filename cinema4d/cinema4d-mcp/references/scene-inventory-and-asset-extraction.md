@@ -111,7 +111,20 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
   - **Choose the cables by measurement.** Read each wire's spline from the generator's cache. Test the
     points against the other plugs' boxes in plug-local space and against the region just behind the
     port faces. Hide the offenders, then re-evaluate: the bundle layout shifts when cables drop out.
-    Repeat until nothing clashes.
+    Repeat until nothing clashes. Read an existing selection only after `ExecutePasses`; before it the
+    cloner has no MoData, and the script overwrote the hand-kept entries.
+  - **Moving clones changes a field-driven visibility pattern.** Here the noise in a Shader Field was
+    sampled in world space, so moving the field object with the plugs didn't help. To keep the exact
+    plug set, record the visible indices before the move. Put the ones that disappeared into a "show"
+    selection (a Plain effector with Visibility and no field, placed after the field effector). Add
+    the ones that appeared to the hide selection, and keep the user's field untouched.
+- **Rack ears floating in front of the rails** (a device placed at a scene position, not on the rack's
+  U grid):
+  - Mount it like the rack's own devices: rack scale, whole-U height, centred.
+  - Keep the device front at its old depth and use a true-size mesh variant with the ears moved back
+    (recessed ear position, as on real switches), so the ears sit on the rails.
+  - Moving the device back onto the rails instead made it 14–16 % smaller on close cameras (it was 2–3
+    m away). Measure the camera distance first, then pick.
 - **Quick frames of a heavy scene:** use the scene's own takes with `Commandline -oresolution W H`
   (10–30 s per frame at 721×450). Brighten dark frames only for inspection.
 - **Launch failures:** Git Bash launches of Commandline and c4dpy started to fail instantly (exit 139,
