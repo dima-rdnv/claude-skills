@@ -57,6 +57,47 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
 - A 1 GB scene returned None from `LoadDocument` in c4dpy 2027 (300–500 MB files loaded); cause not
   investigated — fall back to a smaller scene holding the same model.
 
+## Swapping hardware in a heavy scene, headless (verified 2027.0, Nov 2026, a 330 MB scene)
+- **Build a library first.** Bake each replacement device to one polygon mesh: run
+  CurrentStateToObject on the device root, Connect each effective-material group, then merge those
+  meshes yourself, writing one polygon selection and one texture tag per material and copying the
+  UVs. Three traps:
+  - In c4dpy 2027, Connect (`MCOMMAND_JOIN`) on a whole hierarchy wrote its texture tags with empty
+    restrictions, so every part rendered with the last material.
+  - Walk only the CSTO result's own subtree (`[root] + walk(root.GetDown())`). A helper that also
+    follows `GetNext()` from the root pulled in other top-level objects.
+  - Build helper geometry inside the target document. Tags that point at another document's
+    materials came out empty.
+- **Place copies as render instances** (mode 1) of the baked meshes, under one null per cabinet that
+  carries the scene's uniform scale. Read the object scale of what you replace first: in this scene the
+  units sat at 12.5× and the cabinets were modelled at about 10×. Match the scale per role, uniformly.
+- **Keep the composition.** Map the original's modules (their y-ranges in the cabinet's own space) to
+  whole rack units and place one device per module. Leave the gaps open: the openings were part of the
+  shot. Reserve slots for anything else (hero units, cabled switches) only when the object's *centre*
+  lies inside that rack. A corner-overlap test also reserved slots in the touching racks next to it.
+- **Hide the originals in place** (`MODE_OFF`) instead of deleting them. Take overrides on a parent
+  group's visibility still apply to new objects placed under it. Save to a new file next to the
+  original so relative textures still resolve. Then compare fps, frame range, take count,
+  render-setting count and cameras against the original.
+- **Re-target cable rigs (MoGraph).** Use a Cloner in Object mode on a mesh with one small quad per
+  port: Distribution Polygon Center, Align on.
+  - The clone's Z points into the port for only one of the two windings.
+  - Its in-plane rotation follows the vertex order. Shift the start vertex by 2 to turn a clone
+    180°, e.g. for the upside-down lower port of a stacked cage.
+  - Read the MoData matrices and compare them with the wanted frames. Try both windings × 4 start
+    vertices once, then reuse the result.
+  - With Fix Clone on, the clone matrix replaces the child's own matrix. Model the plug in the
+    child's local axes and keep the null the wire generator starts from.
+- **Quick frames of a heavy scene:** use the scene's own takes with `Commandline -oresolution W H`
+  (10–30 s per frame at 721×450). Brighten dark frames only for inspection.
+- **Launch failures:** Git Bash launches of Commandline and c4dpy started to fail instantly (exit 139,
+  0 s) while a trivial c4dpy script still ran. The same calls through PowerShell
+  `Start-Process -Wait` worked. In PowerShell, avoid single-letter function names: `R` is an alias of
+  Invoke-History.
+- **EXR from child takes:** a child take inherits its parent's render setting, output format
+  included, and here that was EXR. Read it with `OpenEXR`:
+  `OpenEXR.File(p).channels()['RGBA'].pixels`.
+
 ## Other headless notes (c4dpy 2027.0)
 - Standard renderer `RenderDocument` works headless: a 330k-poly FBX merged into a new document with
   3 distant lights + environment ambient rendered 1600×1200 with alpha in ~2 s (`MultipassBitmap`,
