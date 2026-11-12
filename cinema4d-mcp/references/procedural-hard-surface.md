@@ -49,6 +49,28 @@ Building rack-mount hardware (switches, servers) from a reference photo/render w
   it with the reference window of width `image_width / k` around the detail's projected point
   `(x_c + f_px·x/(d+z), y_c + f_px·e/(d+z))`, upscaled. Same eye point, so it matches almost 1:1.
 
+## Building several devices from one kit (verified Nov 2026: a 2RU and a 1RU switch in one pass)
+- One builder script with a spec per device: openings as contours in panel coordinates, a list of
+  (name, kit part, u, v, z) placements, rear modules, ears, the matched-camera numbers. When a kit part
+  changes, rebuild the device documents from the kit rather than patching their master copies.
+- **Straight-on panel elevations** (open device-type libraries publish front-panel images that are
+  exactly the body width) give u, v directly: scale = image width / panel width. Faster and more exact
+  than rectifying a perspective render; use the render only for the camera match and the 3D details.
+- Identify a hex lattice before rebuilding it: autocorrelate a row inside the band (the same-row pitch)
+  and a column (the in-column pitch). Column spacing / in-column pitch = √3/2 means **flat-top** hexes
+  stacked in columns; the same ratio between rows and row pitch means pointy-top. Hole size from the
+  dark-area fraction: f2f = √(q · cell area / 0.866).
+- The overlap guard also catches holes too close to the panel edge (a slot column at exactly the
+  minimum web from the edge failed on rounding; keep a little more).
+- **Holes in thin parts (rack-ear slots) must be cut**: dark slot boxes 0.4 mm thick with a large fillet,
+  laid on the ear, did not render at all (cause not isolated; the fillet was larger than half the
+  thickness). An ear built as a spline outline + stadium-shaped holes under an Extrude, inside a hidden
+  master used by render instances, rendered see-through slots.
+- Hollow round parts (coax jacks, barrels): `Otube` (`PRIM_TUBE_IRAD/ORAD/HEIGHT`, `PRIM_AXIS`). A
+  solid cylinder's cap hid the bore and pin.
+- Reference photos of one product family differ in exposure (top surfaces from sRGB 157 to 200 for the
+  same paint). Match the paint on one reference and keep it shared; don't tune it per photo.
+
 ## Details that read wrong until fixed
 - **Port cages are ganged**: one stamped 1×N / 2×N part fills each panel opening, with shared walls
   and thin bright front edges. Single cages, each with its own rim, put a thick frame around every

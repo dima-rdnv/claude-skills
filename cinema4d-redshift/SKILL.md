@@ -138,6 +138,10 @@ Most shots need far less than Redshift's defaults; lower settings render faster 
   (`600xx` live-mode copies exist too). Set `[60000] = 1` before writing the classic ids.
 - `7006` (GI depth) and `7003` (secondary bounces) are linked: secondary = depth − 1. Set only `7006`
   (= 2 for two bounces); writing `7003 = 2` afterwards pushed `7006` back to 3.
+- **Progressive mode ignored the camera's Film Offset** (verified 2027.0, Commandline renders): with
+  `[21151] = 1` a lens-shifted standard camera rendered as if unshifted, and the PNG alpha was 1
+  everywhere. The same take in bucket mode (`[21151] = 0`) framed correctly with a real alpha. Use
+  bucket mode for product-matched (lens-shift) cameras and whenever the alpha matters.
 
 ## Lights, textures and render speed (verified C4D 2027.0 + RS, Windows, Nov 2026)
 - **Native C4D lights rendered black** in a Commandline Redshift render (only emissive materials
