@@ -1,0 +1,78 @@
+{
+  "name": "dima-rdnv",
+  "owner": {
+    "name": "dima-rdnv"
+  },
+  "metadata": {
+    "description": "Verified, production-tested Agent Skills for Houdini, Cinema 4D, Unreal Engine, After Effects and Premiere Pro"
+  },
+  "plugins": [
+    {
+      "name": "houdini",
+      "description": "Houdini through MCP: POP particles, pyro in moving containers, VDB surfacing, flipbooks and GL passes, readable networks, Alembic and VDB export for Cinema 4D",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./houdini-mcp",
+        "./houdini-pop-particles",
+        "./houdini-pyro-smoke",
+        "./houdini-vdb-surfacing",
+        "./houdini-flipbook",
+        "./houdini-network-layout",
+        "./houdini-to-cinema4d"
+      ]
+    },
+    {
+      "name": "cinema4d",
+      "description": "Cinema 4D through MCP and c4dpy: Redshift node materials and test renders, native particles, Alembic, rigs, takes, Motion Tracker, render previews",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./cinema4d-mcp",
+        "./cinema4d-redshift",
+        "./cinema4d-particles",
+        "./cinema4d-alembic",
+        "./cinema4d-rigging",
+        "./cinema4d-takes",
+        "./cinema4d-render-preview",
+        "./cinema4d-motion-tracker"
+      ]
+    },
+    {
+      "name": "unreal",
+      "description": "Unreal Engine 5.8 through Epic's Unreal MCP plugin and Python: materials, Level Sequences and Movie Render Queue, LED volume rigs, editor tools, content clean-up, Ultra Dynamic Sky",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./unreal-mcp",
+        "./unreal-materials-python",
+        "./unreal-sequencer-python",
+        "./unreal-led-volume-rig",
+        "./unreal-editor-tools",
+        "./unreal-content-management",
+        "./unreal-ultra-dynamic-sky"
+      ]
+    },
+    {
+      "name": "adobe",
+      "description": "After Effects and Premiere Pro without MCP, through small file-based CEP bridges, plus After Effects scripting from a macOS shell",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./aftereffects-bridge",
+        "./aftereffects-scripting",
+        "./premiere-bridge"
+      ]
+    },
+    {
+      "name": "production",
+      "description": "App-independent helpers: voice-over word timings in frames, and per-production notes kept between sessions",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./vo-timing",
+        "./project-notes"
+      ]
+    }
+  ]
+}
