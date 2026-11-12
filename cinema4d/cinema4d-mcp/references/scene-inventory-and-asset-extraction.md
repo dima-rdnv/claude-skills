@@ -113,6 +113,21 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
     port faces. Hide the offenders, then re-evaluate: the bundle layout shifts when cables drop out.
     Repeat until nothing clashes. Read an existing selection only after `ExecutePasses`; before it the
     cloner has no MoData, and the script overwrote the hand-kept entries.
+  - **Test every cable against every device and every plug in the scene**, not just its own rig and
+    switch. Clashes found that way:
+    - Two racks met at a corner, so half of one switch's ports faced into the neighbouring rack's
+      devices.
+    - Bundles crossed through other racks' switches.
+    - Paths drawn for smaller old hardware went straight through the new, deeper bodies.
+
+    Device names repeat in every rack (U07_H6 …): collect instances by walking the tree, never in a
+    dict keyed by name. That mistake silently dropped most devices and reported zero clashes.
+  - **Path fixes for a few cables:** move only the Path points that run through a body (over its top
+    with bundle radius + wire radius to spare, bends behind its back). Search a small grid of
+    variants in memory (heights, bend depths, Aligned Portion) and take the zero-clash variant
+    closest to the original.
+  - **Bundle ends that dive into a device** are fine when hidden. Find the entry point, project it into
+    every camera over the shot, and look at the render there: here both were behind nearer hardware.
   - **Moving clones changes a field-driven visibility pattern.** Here the noise in a Shader Field was
     sampled in world space, so moving the field object with the plugs didn't help. To keep the exact
     plug set, record the visible indices before the move. Put the ones that disappeared into a "show"
