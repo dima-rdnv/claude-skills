@@ -71,9 +71,16 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
 - **Place copies as render instances** (mode 1) of the baked meshes, under one null per cabinet that
   carries the scene's uniform scale. Read the object scale of what you replace first: in this scene the
   units sat at 12.5× and the cabinets were modelled at about 10×. Match the scale per role, uniformly.
+- **Keep what the cameras see.** Size the replacement to the original's volume and on-camera detail
+  size, not to a textbook real-world size:
+  - A real 42U, 60 cm rack at the cabinets' ~10× made every device about 20% smaller on camera.
+    Derive the scale from the original modules' width (here ~12.2× a 19-inch device), then build the
+    frame to fill the same volume (here 35U, 52 × 167 × 53 cm real).
+  - Copy the original's open or closed structure too. Side, back and roof panels the original didn't
+    have blocked the scene's sky light, and the racks rendered black inside.
 - **Keep the composition.** Map the original's modules (their y-ranges in the cabinet's own space) to
-  whole rack units and place one device per module. Leave the gaps open: the openings were part of the
-  shot. Reserve slots for anything else (hero units, cabled switches) only when the object's *centre*
+  whole rack units and place one device per module. Derive the map from the geometry rather than by
+  hand. Leave the gaps open: the openings were part of the shot. Reserve slots for anything else (hero units, cabled switches) only when the object's *centre*
   lies inside that rack. A corner-overlap test also reserved slots in the touching racks next to it.
 - **Hide the originals in place** (`MODE_OFF`) instead of deleting them. Take overrides on a parent
   group's visibility still apply to new objects placed under it. Save to a new file next to the
