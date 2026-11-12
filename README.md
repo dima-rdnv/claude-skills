@@ -29,9 +29,10 @@ flowchart TB
 
 ## The skills
 
-Each app has a **core** skill that Claude loads every time it touches that app. The core skill
-tells Claude which of the others to load for the task. Folder names start with the app, so the
-repo lists them in the same groups.
+The skills sit in one folder per app: [`houdini/`](houdini), [`cinema4d/`](cinema4d),
+[`unreal/`](unreal), [`adobe/`](adobe) and [`general/`](general). Each app has a **core** skill
+that Claude loads every time it touches that app. The core skill tells Claude which of the others
+to load for the task.
 
 ### Houdini
 
@@ -39,30 +40,30 @@ Connects through [capoomgit/houdini-mcp](https://github.com/capoomgit/houdini-mc
 
 | Skill | What it's for |
 |---|---|
-| [houdini-mcp](houdini-mcp/SKILL.md) | **Core: start here.** Installing the bridge on Windows and macOS, call timeouts, parking the display flag so sims don't cook on every call, `hou` API traps, keys from Python, caching long sims in the background, moving a project to another machine, FBX and Alembic import. |
-| [houdini-pop-particles](houdini-pop-particles/SKILL.md) | **Particle sims that behave.** Collisions that really contain and bounce particles (and the setups that failed), sources and bursts, physics-based spray slow-down, following a moving piston, clumping, speed ramps, how to measure a sim. |
-| [houdini-pyro-smoke](houdini-pyro-smoke/SKILL.md) | **Smoke and fire in a closed, moving container.** CAD colliders with velocity, a chamber that expands and then exhausts through a valve, sources that follow a moving volume, a flame envelope around an object, dissipation in real units, caching. |
-| [houdini-vdb-surfacing](houdini-vdb-surfacing/SKILL.md) | **Particles into liquid-like blobs.** VDB from particles, smoothed SDF, mesh with the colour transferred back, settings that work, blob-count checks, rescaling when the particle count changes. |
-| [houdini-flipbook](houdini-flipbook/SKILL.md) | **Previews and comp passes.** Viewport flipbooks to image sequences, OpenGL ROP passes with real alpha from `hython`, a camera copied from Cinema 4D, volume display for smoke and fire passes. |
-| [houdini-network-layout](houdini-network-layout/SKILL.md) | **Networks other people can read.** Numbered network boxes, sticky notes, node comments, grid layout with overlap checks, and a safe way to delete "unused" nodes. |
-| [houdini-to-cinema4d](houdini-to-cinema4d/SKILL.md) | **Sims out to Cinema 4D and Redshift.** The Alembic export chain that works (attribute clean-up, scale, `width` instead of `pscale`), particles for RS Particle Groups, VDBs for RS Volume, meshes with point attributes for vertex maps, one-frame test exports, re-exports without re-simulating. |
+| [houdini-mcp](houdini/houdini-mcp/SKILL.md) | **Core: start here.** Installing the bridge on Windows and macOS, call timeouts, parking the display flag so sims don't cook on every call, `hou` API traps, keys from Python, caching long sims in the background, moving a project to another machine, FBX and Alembic import. |
+| [houdini-pop-particles](houdini/houdini-pop-particles/SKILL.md) | **Particle sims that behave.** Collisions that really contain and bounce particles (and the setups that failed), sources and bursts, physics-based spray slow-down, following a moving piston, clumping, speed ramps, how to measure a sim. |
+| [houdini-pyro-smoke](houdini/houdini-pyro-smoke/SKILL.md) | **Smoke and fire in a closed, moving container.** CAD colliders with velocity, a chamber that expands and then exhausts through a valve, sources that follow a moving volume, a flame envelope around an object, dissipation in real units, caching. |
+| [houdini-vdb-surfacing](houdini/houdini-vdb-surfacing/SKILL.md) | **Particles into liquid-like blobs.** VDB from particles, smoothed SDF, mesh with the colour transferred back, settings that work, blob-count checks, rescaling when the particle count changes. |
+| [houdini-flipbook](houdini/houdini-flipbook/SKILL.md) | **Previews and comp passes.** Viewport flipbooks to image sequences, OpenGL ROP passes with real alpha from `hython`, a camera copied from Cinema 4D, volume display for smoke and fire passes. |
+| [houdini-network-layout](houdini/houdini-network-layout/SKILL.md) | **Networks other people can read.** Numbered network boxes, sticky notes, node comments, grid layout with overlap checks, and a safe way to delete "unused" nodes. |
+| [houdini-to-cinema4d](houdini/houdini-to-cinema4d/SKILL.md) | **Sims out to Cinema 4D and Redshift.** The Alembic export chain that works (attribute clean-up, scale, `width` instead of `pscale`), particles for RS Particle Groups, VDBs for RS Volume, meshes with point attributes for vertex maps, one-frame test exports, re-exports without re-simulating. |
 
 ### Cinema 4D
 
 Connects through Maxon's built-in MCP server (C4D 2026.4 and later) or the community
 [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp) plugin, plus headless `c4dpy`.
-Step-by-step setup: [cinema4d-mcp/SETUP.md](cinema4d-mcp/SETUP.md).
+Step-by-step setup: [cinema4d-mcp/SETUP.md](cinema4d/cinema4d-mcp/SETUP.md).
 
 | Skill | What it's for |
 |---|---|
-| [cinema4d-mcp](cinema4d-mcp/SKILL.md) | **Core: start here.** Telling the two servers apart and setting them up, `exec_python` rules, headless `c4dpy` for long jobs, what changes after a C4D upgrade, Render Queue traps, keys from Python, testing in throwaway documents. Scripts for a scene inventory, camera visibility and clean asset extraction. |
-| [cinema4d-redshift](cinema4d-redshift/SKILL.md) | **Redshift materials and renders.** Node materials through the maxon graph API with node and port IDs, look recipes (emission-only gold, atmosphere rim, gradient sky, liquids and glass), RS volumes, fast render settings, image sequences on textures, rendering a take from a script, and dead ends. |
-| [cinema4d-particles](cinema4d-particles/SKILL.md) | **Native particles (2024 and later).** Object IDs, emitters and groups, Data Mapper, Math, Condition and Reproduce, per-group drag, measured forces, Cloner on particles, Redshift, plus recipes for a travelling trail and delayed 360° bursts. |
-| [cinema4d-alembic](cinema4d-alembic/SKILL.md) | **Alembic in.** Importer options from Python, frame mapping, checking an import against the scene, particle channels, mesh point attributes as animated vertex maps driving MoGraph (tested with 500k clones), coloured sim previews in the Viewport Renderer. |
-| [cinema4d-rigging](cinema4d-rigging/SKILL.md) | **Control rigs.** User data and keyed controls, Python tag drivers, dropdowns that follow a folder, even-speed travel along a spline, a live slider-crank piston, Python generators, the one-frame lag between tags, retiming cycle controls, HUD. |
-| [cinema4d-takes](cinema4d-takes/SKILL.md) | **Variants as takes.** Reading and adding overrides (user data included), override groups, per-take cameras and render settings, splitting an edit camera into shot takes, promoting a take to Main, rendering many takes through the Render Queue, splitting a shot into passes. |
-| [cinema4d-render-preview](cinema4d-render-preview/SKILL.md) | **Letting Claude see the render.** Small renders returned as base64 JPEG, crops and contact sheets, isolating one effect, cheap numeric checks, comparing against reference footage, viewport screenshots. |
-| [cinema4d-motion-tracker](cinema4d-motion-tracker/SKILL.md) | **Camera tracking from Python.** Reading tracks and the 3D solve, why a solve stops, tracking new and AI-generated footage, extending a solve past an occlusion (PnP, triangulation, bundle adjustment), de-jittering, object tracks, real-world scale, baking a clean camera. Includes six scripts. |
+| [cinema4d-mcp](cinema4d/cinema4d-mcp/SKILL.md) | **Core: start here.** Telling the two servers apart and setting them up, `exec_python` rules, headless `c4dpy` for long jobs, what changes after a C4D upgrade, Render Queue traps, keys from Python, testing in throwaway documents. Scripts for a scene inventory, camera visibility and clean asset extraction. |
+| [cinema4d-redshift](cinema4d/cinema4d-redshift/SKILL.md) | **Redshift materials and renders.** Node materials through the maxon graph API with node and port IDs, look recipes (emission-only gold, atmosphere rim, gradient sky, liquids and glass), RS volumes, fast render settings, image sequences on textures, rendering a take from a script, and dead ends. |
+| [cinema4d-particles](cinema4d/cinema4d-particles/SKILL.md) | **Native particles (2024 and later).** Object IDs, emitters and groups, Data Mapper, Math, Condition and Reproduce, per-group drag, measured forces, Cloner on particles, Redshift, plus recipes for a travelling trail and delayed 360° bursts. |
+| [cinema4d-alembic](cinema4d/cinema4d-alembic/SKILL.md) | **Alembic in.** Importer options from Python, frame mapping, checking an import against the scene, particle channels, mesh point attributes as animated vertex maps driving MoGraph (tested with 500k clones), coloured sim previews in the Viewport Renderer. |
+| [cinema4d-rigging](cinema4d/cinema4d-rigging/SKILL.md) | **Control rigs.** User data and keyed controls, Python tag drivers, dropdowns that follow a folder, even-speed travel along a spline, a live slider-crank piston, Python generators, the one-frame lag between tags, retiming cycle controls, HUD. |
+| [cinema4d-takes](cinema4d/cinema4d-takes/SKILL.md) | **Variants as takes.** Reading and adding overrides (user data included), override groups, per-take cameras and render settings, splitting an edit camera into shot takes, promoting a take to Main, rendering many takes through the Render Queue, splitting a shot into passes. |
+| [cinema4d-render-preview](cinema4d/cinema4d-render-preview/SKILL.md) | **Letting Claude see the render.** Small renders returned as base64 JPEG, crops and contact sheets, isolating one effect, cheap numeric checks, comparing against reference footage, viewport screenshots. |
+| [cinema4d-motion-tracker](cinema4d/cinema4d-motion-tracker/SKILL.md) | **Camera tracking from Python.** Reading tracks and the 3D solve, why a solve stops, tracking new and AI-generated footage, extending a solve past an occlusion (PnP, triangulation, bundle adjustment), de-jittering, object tracks, real-world scale, baking a clean camera. Includes six scripts. |
 
 ### Unreal Engine
 
@@ -71,13 +72,13 @@ execution. No third-party server.
 
 | Skill | What it's for |
 |---|---|
-| [unreal-mcp](unreal-mcp/SKILL.md) | **Core: start here.** Enabling and auto-starting the MCP plugin, using its toolsets, Python remote execution with [ue_exec.py](unreal-mcp/scripts/ue_exec.py), viewport captures Claude can look at, calls that crash the editor, where the logs are. |
-| [unreal-materials-python](unreal-materials-python/SKILL.md) | **Materials from code.** Materials, material functions and parameter collections from Python, Custom HLSL nodes, injecting a function into existing materials (Substrate too) and finding every master a level uses, keeping emissive out of Lumen GI, post-process overlays, data textures, compile errors. |
-| [unreal-sequencer-python](unreal-sequencer-python/SKILL.md) | **Sequences and renders.** Level Sequences with a keyed cine camera or a camera on a movable rail, camera cuts, animated parameter collections, auto-play on Play, Movie Render Queue jobs and presets, checking the result in Play-In-Editor. |
-| [unreal-led-volume-rig](unreal-led-volume-rig/SKILL.md) | **Multi-screen LED rooms and CAVEs.** Reading an existing Cinema 4D rig headless, converting film offsets to sensor offsets, screens that meet edge to edge, keeping the rig level on a rail, one sequence and render preset per screen. |
-| [unreal-editor-tools](unreal-editor-tools/SKILL.md) | **Buttons for the artist.** A custom menu registered at every editor start, undoable actions, progress and message dialogs, piloting actors, reading and setting the viewport camera, Game View. |
-| [unreal-content-management](unreal-content-management/SKILL.md) | **Reorganising content without breaking it.** Batch moves and redirectors, tidying the Outliner, moving maps (and the crash to avoid), World Partition and one-file-per-actor levels, what adding a sample does to config, backups, folder colours. |
-| [unreal-ultra-dynamic-sky](unreal-ultra-dynamic-sky/SKILL.md) | **Ultra Dynamic Sky.** Replacing a template sky with it, reading and setting its ~1000 Blueprint variables through MCP, locking exposure for renders. |
+| [unreal-mcp](unreal/unreal-mcp/SKILL.md) | **Core: start here.** Enabling and auto-starting the MCP plugin, using its toolsets, Python remote execution with [ue_exec.py](unreal/unreal-mcp/scripts/ue_exec.py), viewport captures Claude can look at, calls that crash the editor, where the logs are. |
+| [unreal-materials-python](unreal/unreal-materials-python/SKILL.md) | **Materials from code.** Materials, material functions and parameter collections from Python, Custom HLSL nodes, injecting a function into existing materials (Substrate too) and finding every master a level uses, keeping emissive out of Lumen GI, post-process overlays, data textures, compile errors. |
+| [unreal-sequencer-python](unreal/unreal-sequencer-python/SKILL.md) | **Sequences and renders.** Level Sequences with a keyed cine camera or a camera on a movable rail, camera cuts, animated parameter collections, auto-play on Play, Movie Render Queue jobs and presets, checking the result in Play-In-Editor. |
+| [unreal-led-volume-rig](unreal/unreal-led-volume-rig/SKILL.md) | **Multi-screen LED rooms and CAVEs.** Reading an existing Cinema 4D rig headless, converting film offsets to sensor offsets, screens that meet edge to edge, keeping the rig level on a rail, one sequence and render preset per screen. |
+| [unreal-editor-tools](unreal/unreal-editor-tools/SKILL.md) | **Buttons for the artist.** A custom menu registered at every editor start, undoable actions, progress and message dialogs, piloting actors, reading and setting the viewport camera, Game View. |
+| [unreal-content-management](unreal/unreal-content-management/SKILL.md) | **Reorganising content without breaking it.** Batch moves and redirectors, tidying the Outliner, moving maps (and the crash to avoid), World Partition and one-file-per-actor levels, what adding a sample does to config, backups, folder colours. |
+| [unreal-ultra-dynamic-sky](unreal/unreal-ultra-dynamic-sky/SKILL.md) | **Ultra Dynamic Sky.** Replacing a template sky with it, reading and setting its ~1000 Blueprint variables through MCP, locking exposure for renders. |
 
 ### After Effects and Premiere Pro
 
@@ -86,16 +87,16 @@ a script into an inbox folder and the panel writes the result back as JSON.
 
 | Skill | What it's for |
 |---|---|
-| [aftereffects-bridge](aftereffects-bridge/SKILL.md) | **After Effects, Windows and macOS.** A [panel](aftereffects-bridge/panel) that runs only signed scripts, installers for both systems, inspecting comps, preview frames, render-queue exports, swapping renders in an OCIO project, Cinema 4D camera and nulls matched to 0.04 px, retiming keys to a voice-over, HUD and UI layers. |
-| [aftereffects-scripting](aftereffects-scripting/SKILL.md) | **After Effects from a macOS shell, no panel.** AppleScript plus ExtendScript for reading comps and markers, shot tables, review comps, one layer per shot, compositing passes from other apps, time-remap holds, split screens, render-queue frame checks. |
-| [premiere-bridge](premiere-bridge/SKILL.md) | **Premiere Pro, Windows.** A self-signed [panel](premiere-bridge/panel) (CEP 12 ignores debug mode), inspecting sequences and bins, frame export, relinking to transcoded media with before-and-after proof, transcode settings that keep the picture identical. |
+| [aftereffects-bridge](adobe/aftereffects-bridge/SKILL.md) | **After Effects, Windows and macOS.** A [panel](adobe/aftereffects-bridge/panel) that runs only signed scripts, installers for both systems, inspecting comps, preview frames, render-queue exports, swapping renders in an OCIO project, Cinema 4D camera and nulls matched to 0.04 px, retiming keys to a voice-over, HUD and UI layers. |
+| [aftereffects-scripting](adobe/aftereffects-scripting/SKILL.md) | **After Effects from a macOS shell, no panel.** AppleScript plus ExtendScript for reading comps and markers, shot tables, review comps, one layer per shot, compositing passes from other apps, time-remap holds, split screens, render-queue frame checks. |
+| [premiere-bridge](adobe/premiere-bridge/SKILL.md) | **Premiere Pro, Windows.** A self-signed [panel](adobe/premiere-bridge/panel) (CEP 12 ignores debug mode), inspecting sequences and bins, frame export, relinking to transcoded media with before-and-after proof, transcode settings that keep the picture identical. |
 
-### Any app
+### General
 
 | Skill | What it's for |
 |---|---|
-| [vo-timing](vo-timing/SKILL.md) | **Animation keyed to the voice-over.** Word-level timings from an mp3 or wav with faster-whisper, converted to frames at the project frame rate. |
-| [project-notes](project-notes/SKILL.md) | **Memory between sessions.** One private `NOTES.md` per production (brief, beats, VO timings, file map, verified state, open tasks), read at the start of a task and updated at the end. |
+| [vo-timing](general/vo-timing/SKILL.md) | **Animation keyed to the voice-over.** Word-level timings from an mp3 or wav with faster-whisper, converted to frames at the project frame rate. |
+| [project-notes](general/project-notes/SKILL.md) | **Memory between sessions.** One private `NOTES.md` per production (brief, beats, VO timings, file map, verified state, open tasks), read at the start of a task and updated at the end. |
 
 ## Requirements
 
@@ -104,8 +105,8 @@ a script into an inbox folder and the panel writes the result back as JSON.
 | Houdini | [capoomgit/houdini-mcp](https://github.com/capoomgit/houdini-mcp) | Houdini 21–22 Indie, Windows and macOS |
 | Cinema 4D | Maxon's built-in MCP server (2026.4+) or [ttiimmaacc/cinema4d-mcp](https://github.com/ttiimmaacc/cinema4d-mcp) | Cinema 4D 2026–2027 with Redshift, Windows and macOS |
 | Unreal Engine | Epic's Unreal MCP plugin + Python remote execution | UE 5.8, Windows |
-| After Effects | Included panel, [install.ps1](aftereffects-bridge/scripts/install.ps1) or [install.sh](aftereffects-bridge/scripts/install.sh) | AE 2026, Windows and macOS |
-| Premiere Pro | Included panel, [install.ps1](premiere-bridge/scripts/install.ps1) | Premiere 2026, Windows |
+| After Effects | Included panel, [install.ps1](adobe/aftereffects-bridge/scripts/install.ps1) or [install.sh](adobe/aftereffects-bridge/scripts/install.sh) | AE 2026, Windows and macOS |
+| Premiere Pro | Included panel, [install.ps1](adobe/premiere-bridge/scripts/install.ps1) | Premiere 2026, Windows |
 
 Setup notes, including the problems we ran into, are in each app's core or bridge skill.
 
@@ -121,24 +122,31 @@ claude plugin marketplace add dima-rdnv/claude-skills
 claude plugin install cinema4d@dima-rdnv
 ```
 
-The plugins are `houdini`, `cinema4d`, `unreal`, `adobe` and `production`. To get new findings
+The plugins match the folders: `houdini`, `cinema4d`, `unreal`, `adobe` and `general`. To get new findings
 later, run `claude plugin marketplace update dima-rdnv` and then `claude plugin update
 cinema4d@dima-rdnv`. Skills installed this way are named with the plugin first, for example
 `cinema4d:cinema4d-redshift`.
 
 **Claude Code, as a git clone.** Use this if you want Claude to add its own findings back into the
-skills. If you don't have a `~/.claude/skills` folder yet, clone straight into it:
+skills. Claude Code only looks one folder deep in `~/.claude/skills`, so clone the repo next to it
+and link the skills in:
 
 ```bash
-git clone https://github.com/dima-rdnv/claude-skills.git ~/.claude/skills
+git clone https://github.com/dima-rdnv/claude-skills.git ~/.claude/claude-skills
 ```
-
-If the folder already exists, clone elsewhere and copy the skill folders in:
 
 ```bash
-git clone https://github.com/dima-rdnv/claude-skills.git
-for d in claude-skills/*/; do cp -R "${d%/}" ~/.claude/skills/; done
+~/.claude/claude-skills/link-skills.sh
 ```
+
+On Windows, run the PowerShell version instead. It makes junctions, so it needs no admin rights:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$HOME\.claude\claude-skills\link-skills.ps1"
+```
+
+Run the script again after a pull that adds, moves or renames a skill. Edits Claude makes through
+the links land in the clone, ready to commit.
 
 **Claude apps (claude.ai, Desktop).** Zip a skill folder (the folder itself, with `SKILL.md`
 inside) and upload it in Claude's Skills settings.

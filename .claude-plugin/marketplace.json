@@ -13,13 +13,13 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./houdini-mcp",
-        "./houdini-pop-particles",
-        "./houdini-pyro-smoke",
-        "./houdini-vdb-surfacing",
-        "./houdini-flipbook",
-        "./houdini-network-layout",
-        "./houdini-to-cinema4d"
+        "./houdini/houdini-mcp",
+        "./houdini/houdini-pop-particles",
+        "./houdini/houdini-pyro-smoke",
+        "./houdini/houdini-vdb-surfacing",
+        "./houdini/houdini-flipbook",
+        "./houdini/houdini-network-layout",
+        "./houdini/houdini-to-cinema4d"
       ]
     },
     {
@@ -28,14 +28,14 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./cinema4d-mcp",
-        "./cinema4d-redshift",
-        "./cinema4d-particles",
-        "./cinema4d-alembic",
-        "./cinema4d-rigging",
-        "./cinema4d-takes",
-        "./cinema4d-render-preview",
-        "./cinema4d-motion-tracker"
+        "./cinema4d/cinema4d-mcp",
+        "./cinema4d/cinema4d-redshift",
+        "./cinema4d/cinema4d-particles",
+        "./cinema4d/cinema4d-alembic",
+        "./cinema4d/cinema4d-rigging",
+        "./cinema4d/cinema4d-takes",
+        "./cinema4d/cinema4d-render-preview",
+        "./cinema4d/cinema4d-motion-tracker"
       ]
     },
     {
@@ -44,13 +44,13 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./unreal-mcp",
-        "./unreal-materials-python",
-        "./unreal-sequencer-python",
-        "./unreal-led-volume-rig",
-        "./unreal-editor-tools",
-        "./unreal-content-management",
-        "./unreal-ultra-dynamic-sky"
+        "./unreal/unreal-mcp",
+        "./unreal/unreal-materials-python",
+        "./unreal/unreal-sequencer-python",
+        "./unreal/unreal-led-volume-rig",
+        "./unreal/unreal-editor-tools",
+        "./unreal/unreal-content-management",
+        "./unreal/unreal-ultra-dynamic-sky"
       ]
     },
     {
@@ -59,19 +59,19 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./aftereffects-bridge",
-        "./aftereffects-scripting",
-        "./premiere-bridge"
+        "./adobe/aftereffects-bridge",
+        "./adobe/aftereffects-scripting",
+        "./adobe/premiere-bridge"
       ]
     },
     {
-      "name": "production",
+      "name": "general",
       "description": "App-independent helpers: voice-over word timings in frames, and per-production notes kept between sessions",
       "source": "./",
       "strict": false,
       "skills": [
-        "./vo-timing",
-        "./project-notes"
+        "./general/vo-timing",
+        "./general/project-notes"
       ]
     }
   ]
