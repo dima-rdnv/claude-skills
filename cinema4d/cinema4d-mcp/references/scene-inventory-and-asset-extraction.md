@@ -95,6 +95,23 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
     vertices once, then reuse the result.
   - With Fix Clone on, the clone matrix replaces the child's own matrix. Model the plug in the
     child's local axes and keep the null the wire generator starts from.
+- **Learn the rig before fixing it.** When cables clashed after re-targeting, rewriting the user's
+  wire generator (packed bundle, a clamp plane in front of the plugs) gave new artifacts: the clamp
+  flattened the cables into a sheet that read as a shelf at grazing angles. The rig's own controls
+  fixed it.
+  - **Exit Length:** plugs with a pull tab that sticks out past the cable boot need a straight cable
+    run past the tab before the bend. Cables that bent at the boot cut through the tabs of the plugs
+    above them.
+  - **Hide individual cables** with the rig's visibility. Put a MoGraph Selection tag on the cloner
+    (`mograph.GeSetMoDataSelection(tag, BaseSelect)`). Add a Plain effector with Visibility on, its
+    Selection set to the tag's name, and a Solid field layer at value 0 (`c4d.FLsolid`,
+    `[c4d.FIELDLAYER_SOLID_VALUE]`). The user can edit the selection afterwards.
+  - **Effector Visibility follows the field weight**: a clone shows at 50 % or more. With no field,
+    the effector *shows* every clone in its selection. Strength 0, 0.2 or −1 changed nothing.
+  - **Choose the cables by measurement.** Read each wire's spline from the generator's cache. Test the
+    points against the other plugs' boxes in plug-local space and against the region just behind the
+    port faces. Hide the offenders, then re-evaluate: the bundle layout shifts when cables drop out.
+    Repeat until nothing clashes.
 - **Quick frames of a heavy scene:** use the scene's own takes with `Commandline -oresolution W H`
   (10–30 s per frame at 721×450). Brighten dark frames only for inspection.
 - **Launch failures:** Git Bash launches of Commandline and c4dpy started to fail instantly (exit 139,

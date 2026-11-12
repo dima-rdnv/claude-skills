@@ -152,9 +152,12 @@ sleep 2      # a background spawn from a remote shell may not start without it
   take document (`td.TakeToDocument(take)`), write results to new files — the open scene is never
   touched. Redshift loads there too — check `c4d.plugins.FindPlugin(1036219)` before saving a file
   that holds RS cameras / lights / video post.
-- **The Viewport renderer doesn't work headless.** `RenderDocument` with the Viewport renderer gave a
-  black frame in c4dpy (and flat grey shading in another scene). Render VP takes in the GUI (Render
-  Queue); c4dpy is fine for edits, exports and Redshift.
+- **The Viewport renderer doesn't work from c4dpy.** `RenderDocument` with the Viewport renderer gave a
+  black frame in c4dpy (and flat grey shading in another scene). **`Commandline.exe -render <file> -take <VP
+  take>` does render it** (verified 2027.0, Windows): a 330 MB scene at 2884×1800 wrote about 3 frames/s
+  after a ~10 s load. Textures follow the render view's Display › Textures toggle:
+  `doc.GetRenderBaseDraw()[c4d.BASEDRAW_DATA_TEXTURES] = True`, saved with the file. c4dpy is fine for
+  edits, exports and Redshift.
 - Use it for anything that would block the GUI: Alembic exports of heavy takes, per-frame sampling,
   file edits saved under a new name (Save-As rules below still apply).
 - **Alembic exports started from the live GUI (through the MCP bridge) stalled** three times after
