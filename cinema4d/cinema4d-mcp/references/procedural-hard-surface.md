@@ -121,5 +121,30 @@ Building rack-mount hardware (switches, servers) from a reference photo/render w
   grow each contour's bbox by half the minimum web and test neighbours (honeycomb hexes: test centre
   distance ≥ flat-to-flat + web instead), and refuse to build on any clash.
 
+## Kit parts for connectors, ears and cage variants (verified 2027.0, Nov 2026)
+- **One cage builder for every layout.** Write one function with columns, rows, pitch and an
+  optional band between the two rows (a 2×N stack with a divider), plus a flag for the interior. All
+  the ganged variants (2×4, 2×1, 1×2) then share wall thickness, front edges and materials.
+- **Cage interiors follow the reference photos.** One product's photos showed bright metal inside
+  the ports and another's showed black. Build both as separate kit parts: a lit-interior variant
+  (bare metal back plate) and a dark one. Don't recolour per device.
+- **Pluggable connectors (transceiver plugs, cable ends) as kit parts**:
+  - true size from the form-factor spec;
+  - the origin on the port face, with the part's axis into the port;
+  - model the section that sits inside the cage too: it shows through the cage's front edges and
+    in close-ups;
+  - add the pull tab and a boot cone where the cable leaves;
+  - put a child null at the cable exit, which cable rigs can start from;
+  - in a scene, place the part under a null that carries the scene's uniform scale; the part itself
+    is never scaled;
+  - a stacked cage's lower row takes the same part turned 180° (tab down), not mirrored.
+- **Rack-ear holes, EIA-310 spacing:** three holes per U, centred 6.35, 22.225 and 38.1 mm above the
+  bottom of that U. Holes cut through the ear (spline + Extrude, see above) render see-through, which
+  is the cue that sells the part at product distance. Build left and right ears as separate parts
+  instead of mirroring one with a −1 scale.
+- Small round light pipes read as part of the cage when they use the cage metal, not a grey plastic.
+- 3/4 product shots of the finished devices (HDRI reflections, one key, camera framing): see
+  `cinema4d-redshift/references/product-shot-lighting.md`.
+
 ## Commandline output names
 - `-oimage …/name` → `name0000.png`, but a name ending in a digit (`…_r2`) became `…_r2_0000.png`.

@@ -144,6 +144,7 @@ Most shots need far less than Redshift's defaults; lower settings render faster 
   bucket mode for product-matched (lens-shift) cameras and whenever the alpha matters.
 
 ## Lights, textures and render speed (verified C4D 2027.0 + RS, Windows, Nov 2026)
+- Product shots (HDRI dome reflections + one key, dome texture ids, non-normalised area lights): `references/product-shot-lighting.md`.
 - **Native C4D lights rendered black** in a Commandline Redshift render (only emissive materials
   showed). Use RS Light objects (1036751): `[10000]` type (0 Infinite, 1 Point, 2 Spot, 3 Area,
   4 Dome, 5 IES, 6 Portal, 7 Sun), area `[11004]` intensity, `[11022]` exposure, `[11005]` units,
