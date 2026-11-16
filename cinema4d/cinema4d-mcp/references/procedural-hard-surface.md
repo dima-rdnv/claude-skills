@@ -165,3 +165,15 @@ Building rack-mount hardware (switches, servers) from a reference photo/render w
 
 ## Commandline output names
 - `-oimage …/name` → `name0000.png`, but a name ending in a digit (`…_r2`) became `…_r2_0000.png`.
+
+## Rounded built-ins and round openings from primitives (verified C4D 2027.0, Nov 2026)
+- **Curved bench / horseshoe sofa:** two `Otube` primitives (seat ring, backrest ring) with
+  `PRIM_TUBE_FILLET = True`, `PRIM_TUBE_FILLET_RADIUS` (cm), `PRIM_TUBE_FSUB`, `PRIM_TUBE_HSUB`, `PRIM_TUBE_SEG` 64,
+  and `PRIM_SLICE = True`, `PRIM_SLICEFROM / PRIM_SLICETO` in radians. With the default +Y axis,
+  `from = -pi/2 + h`, `to = 3*pi/2 - h` kept the arc and left the gap (width 2h) toward C4D -Z; check by the
+  cache's point bbox (the open side reaches less far) and mirror the angles if needed. There are no
+  `PRIM_TUBE_ROTSEG` / `PRIM_TUBE_DOFILLET` constants.
+- **Round opening in a wall:** `Oboole` with `BOOLEOBJECT_TYPE = BOOLEOBJECT_TYPE_SUBTRACT`,
+  `BOOLEOBJECT_HIGHQUALITY = True`; first child the wall slab (cube), second a cylinder with `PRIM_AXIS = 0`
+  (+X) for a wall that is thin in X, height longer than the wall thickness, centre z = radius so the circle stands
+  on the floor. The slab's cube UVs carry through (an LED texture fills the face).

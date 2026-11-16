@@ -145,6 +145,18 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
   real full holes via spline + Extrude, decals, camera matching, compare renders) →
   `references/procedural-hard-surface.md`.
 
+## Importing USD / USDZ that loads empty (verified C4D 2027.0 + Houdini 22, Windows, Nov 2026)
+- A Sketchfab-made USDZ (meshes with a vertex-interpolated, non-indexed `primvars:st0`) loaded as empty nulls in
+  C4D 2027 (`LoadDocument` and the GUI): the console said `Illegal state: UV indices invalid [ousd-import-mesh.cpp]`.
+- Route that worked: read it with hython's own USD library (`from pxr import Usd, UsdGeom`): per `UsdGeom.Mesh`
+  take points (transformed by `ComputeLocalToWorldTransform`), face counts/indices and the `st0` primvar; check
+  `UsdGeom.GetStageMetersPerUnit` (0.01 = cm) and the up axis; dump to JSON. In c4dpy rebuild PolygonObjects:
+  point `(x, y, -z)` (right-handed USD -> left-handed C4D), triangle `CPolygon(a, c, b)` (reversed winding),
+  UV `(u, 1 - v)`. A .usdz is a zip: extract its textures with `zipfile` and build the Redshift material yourself.
+- A c4dpy-built *preview* scene holding only an RS proxy (cloned from an in-memory holder) hung Commandline twice at
+  `Context: Busy:Render Waiting until idle` (RS log); the same proxy placed in the production scene rendered in 35 s.
+  Check new proxies in the real scene, always with `timeout`.
+
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash
 C4D="$(ls -d "/Applications/Maxon Cinema 4D 20"* | tail -1)"     # newest installed version
