@@ -183,6 +183,12 @@ Most shots need far less than Redshift's defaults; lower settings render faster 
 - **Shared GPU**: the same take rendered in 20 s, then took minutes (2 % after 150 s) while other apps
   (compositor, encoder, DCCs) held 22 of 24 GB VRAM. Check `nvidia-smi` before blaming the scene;
   keep test frames small and few.
+  With less free VRAM, Commandline fails fast instead: the log says `Rendering failed: Out of memory`
+  (exit 1, after 40–120 s). On Windows (WDDM) `nvidia-smi` lists GPU processes without their memory, so
+  look for the likely holder by name too. In one case it was a compositor's command-line render
+  (`AfterFX.com`, an aerender job) using 23 of 24.5 GB.
+  Don't stop someone else's render. Wait for it in the background with an `until` loop that exits when
+  the process is gone or memory drops below a threshold, then render.
 - Stopping a background shell loop that runs Commandline (the harness's task stop) left the bash loop
   and `Commandline.exe` running on Windows: find them (`ps -ef | grep <script>`, `tasklist`) and end
   your own processes explicitly, or the next GPU job competes with an orphan.
