@@ -91,6 +91,11 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   position — `SetRelPos` x/y were back at 0 after evaluation (the copy looked at the wrong place); remove it on the copy. Also
   clear `[1130]` focus object and `[8002]` bokeh when the new framing is much longer (f/4 at 750–1050 mm blurred everything);
   the focus-distance track needs the DescID from `GetDescription` (a hand-built `DescLevel(1010)` CTrack failed).
+- **Don't clone a far overview camera for eye-level shots** (verified C4D 2027.0, Commandline, 16 Nov 2026): clones of an
+  overview RS camera (~110 m away, zoom `[7022]` 0.2) rendered everything nearer than ~5 m as missing — floor gone (pure
+  0,0,0 rows), near walls cut open — although Near/Far Clip `[1123]/[1129]` read off and the RS render settings had no
+  clipping. A fresh `c4d.BaseObject(1057516)` with the same Mg and `[500]` rendered correctly. Build shot cameras fresh, and
+  check a clone's `[7022]` zoom (0.2 turned 18 mm into an effective 3.6 mm).
 - **Hair-thin lines (~1 px)**: 1 px at distance z is z · aperture / (focal · width_px). Sweeps with a
   0.018–0.02 cm square profile at 250–490 cm (100 mm, 36 mm gate, 1920 wide) rendered as crisp
   ~1 px lines; emission-only weight 6–8 keeps them bright after anti-aliasing (preview quality).
@@ -115,6 +120,23 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   (`CAMERA_FOCUS`, `CAMERAOBJECT_APERTURE`); its own ids include bokeh `8002`, f-number `1201` (max
   256), focus distance `1010`. **It has no lens shift**: Film Offset is not in its description, and its
   Offset X/Y `13006/13007` sit in the *Background* group (background-image offset).
+- **Panorama / projection textures from an eye point (verified C4D 2027.0, Nov 2026).**
+  - **Don't rely on the RS Spherical lens.** `[1001]` lists 0 Perspective, 14 Spherical, 15 Fisheye, 16 Cylindrical, 17 Stereo Spherical, 1 Orthographic, 12 Isometric, 13 Dimetric.
+    - With 14, a Python-built RS Camera rendered one flat colour in `Commandline.exe` (a tiny patch straight ahead).
+    - Angle of view `[7009]`/`[7010]` = 2π/π was already set and clamps at 2π; `[7015]` = (360, 180) changed nothing.
+    - The same camera with `[1001]` = 0 rendered the scene fine.
+  - **Render a cube map instead:** six RS cameras at the eye, `[500]` = 18, `[7002]` = (36, 36), `[7005]` = 1, square resolution = 90°.
+    - Matrix `c4d.Matrix(eye, cross(up, fwd), up, fwd)`, where cross is the plain math cross product (identity check: Y × Z = X).
+    - Sample a face at u = 0.5 + 0.5·(d·v1)/(d·v3), v = 0.5 − 0.5·(d·v2)/(d·v3). Stitched seamlessly.
+  - **For an LED wall,** bake the projection straight into the wall's own UV layout:
+    1. For each texel, compute its 3D point.
+    2. Take the direction from the eye.
+    3. Sample the cube map.
+
+    This needs no re-mesh, and the projection is exact at any mesh density.
+  - **Commandline ignores a camera set only on the Main take** of a script-built document. It rendered the default view, which looked empty. Give each camera its own child take and pass `-take`.
+  - **The PNG had alpha 1 everywhere,** even with nothing behind. Either set the render setting's alpha save, or turn the dome off (generator flag) and key the pure-black sky.
+  - **A large RS area light** (e.g. 25 × 8 m floods) with Normalize `[11014]` on spreads its power over the area and lit almost nothing. Turn normalize off and set the exposure.
 - Split screen that must zoom "as one picture" (both halves dolly towards the common screen centre):
   per panel, move the camera sideways by `d0 · tan(a)` and turn it inward by `a = atan(0.5 · aperture /
   focal)` (half the panel's FOV), then dolly along world Z. The panel's centre frames the subject at
@@ -169,6 +191,29 @@ Most shots need far less than Redshift's defaults; lower settings render faster 
 - Verified: an Alembic Particle Group renders as Optimized Spheres at its `width` radius.
 - Verified: native simulated Particle Groups (Basic Emitter) render the same way (radius × 3001);
   material = texture tag on the group. Mode 0 hides a group that only feeds a Cloner.
+
+## Referencing assets: Redshift proxies (.rs), not XRefs (user preference; verified C4D 2027.0, Windows, Nov 2026)
+When a scene should reference reusable models kept in an Assets folder (instead of embedding them), use Redshift
+proxies. The user prefers them to XRefs: lighter scenes, materials and textures travel with the `.rs`.
+- **Export** (headless c4dpy is fine): scene saver `1038650` "RS Proxy (*.rs)". Options via
+  `plug.Message(c4d.MSG_RETRIEVEPRIVATEDATA, d); ex = d["imexporter"]`: `[2000]` Export (0 all), `[2002]` Lights (set 0),
+  `[2003]` compress, `[2004]` proxy origin, **`[2005]` Add Proxy to Scene (set 1)**, `[2007]` remove exported objects,
+  `[3000]` range (0 current frame). `SaveDocument(doc, "<name>.rs", flags, 1038650)`.
+  Asset Browser (`asset:///`) textures are baked next to the `.rs` as `RSC4D-BakedAsset-tex_<hash>~.png`; export each
+  category into its own `rs/` subfolder to keep them tidy.
+- **Proxy object** `1038649`: let the exporter create it (`[2005] = 1` inserts "RS Proxy <name>" into the exported
+  document) and clone that object into the target scene. **Do not write the path yourself**: `[10000]` is a Redshift file
+  datatype (1036765); `p[c4d.REDSHIFT_PROXY_FILE, c4d.REDSHIFT_FILE_PATH] = path` "works" (reads back, prints
+  `CRITICAL: Stop [ge_container.cpp]`) but the saved scene hung Commandline at "Loading Project" (GPU idle, 9 min). The
+  exporter-made proxy rendered in 12 s. Reading the path back: `p[c4d.REDSHIFT_PROXY_FILE, c4d.REDSHIFT_FILE_PATH]`.
+- **Viewport preview** (the user wants full geometry, not a box): `[11001]` Preview = 2 (0 Off, 1 Bounding Box, 2 Mesh),
+  `[11002]` Preview Percentage 1.0, `[11000]` Show Bounding Box 0. `[12000]` Materials From: 0 Proxy File (default, used),
+  1 Object, 2 Scene (match by name/prefix).
+- **Instances** (`Oinstance`, render-instance mode) of a proxy render correctly, also when the proxy sits in a hidden
+  "assets" group — the same pattern as hidden masters. Swapping embedded masters for proxies: put the proxy where the
+  master was, relink every instance whose `INSTANCEOBJECT_LINK == master`, and if the exported asset was re-centred,
+  compensate each instance with `mg.off -= mg.MulV(shift)`. Then delete the master and the materials only it used.
+  Result in one scene: 153 MB → 79 MB, renders unchanged.
 
 ## Image sequences on the Texture node (verified C4D 2026.4, by rendering a barcode sequence)
 - `texturesampler.tex0` sub-ports (Int64 unless noted): `path` (Url), `animation` = Mode

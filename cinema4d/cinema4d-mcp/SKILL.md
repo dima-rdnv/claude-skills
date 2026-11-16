@@ -29,6 +29,9 @@ hints, and correct a note when it no longer holds.
 - `aftereffects-bridge`, `aftereffects-scripting` — reading/building the AE project the renders go into.
 - `project-notes` — per-production notes (scene map, state) kept outside the skills.
 
+**Referencing external models: use Redshift proxies (.rs), not XRefs** (the user's preference). Recipe, traps and the
+viewport mesh-preview settings are in `cinema4d-redshift` ("Referencing assets: Redshift proxies").
+
 ## Two servers — check which one this session has
 - **Maxon's built-in MCP server (C4D 2026.4+) — use this one.** Tools show up as `cinema4d__*`
   with typed tools (`list_documents`, `open_document`, `get_render_status`, `start_queued_render`,
