@@ -30,6 +30,15 @@ for r in (rd_parent, rd_child_a, rd_child_b):          # after the clones exist
 - The user asked for bevels "as a material, not actual geometry". Node
   `com.redshift3d.redshift4c4d.nodes.core.roundcorners`: inputs `.radius` (scene units, default
   0.5), `.numsamples` (6), `.sameobjectonly`; output `.out` → the Standard Material's `.bump_input`.
+- **Round Corners only renders in bucket mode.** With Rendering Mode `[21151] = 1` (progressive) and in
+  the progressive IPR it is silently ignored: a radius of 30 cm on a 60 cm cube showed nothing, on a
+  primitive and on script-built meshes alike. The same file with `[21151] = 0` showed the bevels at
+  once. Hardware ray tracing on or off made no difference. So a scene that relies on it needs bucket
+  render settings, and the user has to switch the IPR to bucket to see it.
+- Polygons built in Python: C4D's face normal is `(a - c) × (b - d)`. A sweep helper that maps its
+  own (along, across, up) axes to X/Z/Y in two orientations turns half the objects inside out. They
+  shade normally in Redshift, so check the sign on a top face per object and swap `b`/`d` where it
+  points down.
 - Keep the mesh edges hard (90°) and give round shapes (pill ends, cylinders) a Phong tag with a
   ~50° limit: `op.SetPhong(True, True, math.radians(50))`.
 - One radius per material, so group parts of similar size under one material (radius about a
