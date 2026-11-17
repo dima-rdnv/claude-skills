@@ -155,7 +155,8 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
   UV `(u, 1 - v)`. A .usdz is a zip: extract its textures with `zipfile` and build the Redshift material yourself.
 - A c4dpy-built *preview* scene holding only an RS proxy (cloned from an in-memory holder) hung Commandline twice at
   `Context: Busy:Render Waiting until idle` (RS log); the same proxy placed in the production scene rendered in 35 s.
-  Check new proxies in the real scene, always with `timeout`.
+  Check new proxies in the real scene, always with `timeout`. The same wait was later traced, in another script-built
+  scene, to a cloned Redshift videopost: see `cinema4d-redshift/references/script-built-scenes.md`.
 
 ## Headless c4dpy for long jobs (verified C4D 2026, macOS)
 ```bash

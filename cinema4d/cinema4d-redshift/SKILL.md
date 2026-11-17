@@ -143,6 +143,13 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   distance d0, and the Z motion converges on the panel's inner edge. At long lenses the turn (1.4° at
   750 mm, 6.8° at 150 mm) shows no visible keystone.
 
+## Script-built scenes: render settings and bevels (verified C4D 2027.0)
+- **A cloned Redshift videopost hung Commandline** ("Busy:Render Waiting until idle"): clone child render
+  settings first (`COPYFLAGS_NO_HIERARCHY`), then give each its own videopost with
+  `redshift.FindAddVideoPost(rd, redshift.VPrsrenderer)`. Details and how to bisect: `references/script-built-scenes.md`.
+- **Bevels belong in the material** (user preference): `roundcorners` `.out` → `standardmaterial.bump_input`,
+  radius in scene units; mesh edges stay hard. Same reference.
+
 ## Fast render settings — the default to start from (user's practice; ids verified C4D 2027.0)
 Most shots need far less than Redshift's defaults; lower settings render faster **and** cleaner:
 - **GI: brute force, 2 bounces.** **Trace depths: lower** (defaults combined 6 / reflection 4 /
