@@ -232,6 +232,18 @@ c4d.documents.SaveDocument(xdoc, out, c4d.SAVEDOCUMENTFLAGS_DONTADDTORECENTLIST,
 - Wrap scene edits in `doc.StartUndo() / AddUndo(...) / EndUndo()` so the user can ⌘Z; `c4d.EventAdd()` after.
   Don't save their file unless asked.
 - A script that errors midway leaves its earlier edits in place — inspect the scene before retrying.
+  Send relay output to a file (`> out.txt 2>&1`): a reply that isn't JSON is the error text. Never
+  re-run an editing script just to read its error, because a second run applies the edits twice.
+  Give every edit phase a guard: a hidden marker null, or a check that a known wall is still at its old
+  position (verified 2027.0).
+- Re-sizing a blocked-out floor plan (rooms to new m² targets) without rebuilding it (verified 2027.0):
+  express each band's change as a piecewise-linear map of plan x / y. Shift wall lines; stretch only
+  between walls, so wall thickness stays. Resize architecture by mapping: a Cube's 8 local corners →
+  world → map → back to local, then set the new `PRIM_CUBE_LEN` and centre. For polygon skins, map the
+  points. Move props rigidly with the wall they belong to; never stretch them. Then fix the UVs of
+  stretched LED skins (extend the u range at constant texel density) and re-build fixed-module finishes
+  (0.5 m panels, 0.6 m pavers) at the new lengths. Helpers that place geometry with `SetAbsPos` assume
+  an un-moved parent: assert the parent's matrix is identity, or reset an emptied group to identity.
 - `doc.GetChanged()` is not proof of user edits: your own probe (set a value and restore it, or
   `SetTime` + `ExecutePasses`) sets it too (verified 2027.0). Before editing a document that reports
   changes, `LoadDocument` its file and compare user data, point lists, code and the `GetMl()` of
