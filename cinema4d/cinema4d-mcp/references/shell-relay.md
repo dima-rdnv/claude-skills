@@ -19,3 +19,8 @@
 - `c4d.documents.KillDocument` on the active document inside `exec_python` closes it fine, but the
   call then ends with "ReferenceError: the object 'c4d.documents.BaseDocument' is not alive" (the
   adapter's own `doc`); the script's stdout is intact. `SetActiveDocument` to another open one after.
+- macOS (verified 2027.0): relay at `/Applications/Maxon Cinema 4D 2027/resource/mxn_plugins/mcp_adapter/
+  scripts/stdio_relay.py`, token at `~/Library/Preferences/Maxon/Maxon Cinema 4D 2027_<id>/prefs/mcp/token`;
+  `/usr/bin/python3` runs it. `scripts/c4d_mcp_call.py` has Windows paths — point its C4D, RELAY and
+  TOKEN at these. Pass `"undo": true` in the exec_python arguments for edits. `capture_viewport`
+  answers with an `image` content item (base64 `data`, `mimeType` image/png) — decode it to a file.
