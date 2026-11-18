@@ -23,3 +23,21 @@ the **Fracture object in Explode Segments mode** does the split itself and stays
   field reveals a stack bottom to top. Each piece flips at the field's plane.
 - Check by numbers: after `ExecutePasses`, `mograph.GeGetMoData(fr).GetArray(c4d.MODATA_FLAGS)` and
   count `& c4d.MOGENFLAG_CLONE_ON`, at several field positions; restore the field position after.
+
+## Rebuilt as instances (verified 2027.0, macOS)
+Fracture copies geometry per piece. To instance: group pieces by exact shape (key = sorted polygons as
+point offsets from the piece's bbox centre on a 0.001 cm grid), one prototype per shape (centred,
+Material + Phong tags copied), most-used first. 31,715 pieces → 1,556 prototypes, 800,913 → 45,020
+stored polygons. Lines with rounded ends can't be one stretched box: the caps would stretch.
+- One Cloner per mesh: Object mode (`MG_POLY_MODE_` = `MG_POLY_MODE_VERTEX`, `MG_OBJECT_ALIGN` off,
+  Iterate), Instance Mode param `1025` = 2 (Multi-Instance), `MG_OBJECT_LINK` = a points-only
+  `PolygonObject(n, 0)` of piece centres (hidden with `c4d.MODE_OFF`; it still distributes).
+- No native per-clone child pick from data, so the cloud carries a vertex map "shape" = (k+0.5)/n and
+  one shared Python effector (`c4d.Omgpython`, `OEPYTHON_MODE_FULLCONTROL`, code in `OEPYTHON_STRING`)
+  copies it: `md.SetArray(c4d.MODATA_CLONE, gen[c4d.MG_OBJECT_LINK].GetTag(c4d.Tvertexmap).GetAllHighlevelData(), False)`.
+  The cloner maps clone value v to child int(v·n). First in the effector list, Visibility after it.
+  Verified per clone (positions exact, every prototype right), after save + load, and in the viewport.
+- Insert children with `doc.InsertObject(child, parent=cloner, pred=prev)` after the cloner is in the doc.
+- 2027 adapter: `exec_python` stops a script past 10M loop iterations (`LoopBudgetExceeded`), leaving
+  earlier edits in place — pass `max_iterations` for big geometry jobs and write scripts that can resume.
+- Comparing shapes on a rounding grid can flag identical pieces (507 vs 508); measure the point gap.
