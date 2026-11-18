@@ -53,3 +53,10 @@ hiding effectors. User data read by name with `op.GetUserDataContainer()`. 53 Cl
 clones: 56–141 ms per evaluation; counts matched the formula at every Build value tested, and
 user data and code survived save + load. Equal time per layer means sparse top layers take half the
 slider — offer time by piece count if that matters.
+- Box field (`c4d.Fbox`) on the Plain Visibility effector: Size (param `1000`) is a **half** size
+  (100 spans ±100 cm). Inner Offset (`1005007`) defaults to 50 %, so with the 50 % visibility threshold
+  the region shrinks to ~¾ of the box; set it to 1.0 for a hard edge (a clone shows when its centre is
+  inside — 8,878 of 8,878 matched). Invert (`1005014`) hides the inside instead. `FieldList.InsertLayer`
+  puts the new layer on top (Normal blend overrides what's below); switch a layer off with
+  `L.SetLayerFlags(L.GetLayerFlags() | c4d.FIELDLAYER_FLAG_SKIP)` on a copy of `eff[c4d.FIELDS]`, then
+  assign it back. The visibility effector and a hide-only Python effector combine as AND.
