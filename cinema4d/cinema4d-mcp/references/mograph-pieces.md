@@ -41,3 +41,15 @@ stored polygons. Lines with rounded ends can't be one stretched box: the caps wo
 - 2027 adapter: `exec_python` stops a script past 10M loop iterations (`LoopBudgetExceeded`), leaving
   earlier edits in place — pass `max_iterations` for big geometry jobs and write scripts that can resume.
 - Comparing shapes on a rounding grid can flag identical pieces (507 vs 508); measure the point gap.
+
+## A fixed build order from a Python effector (verified 2027.0, macOS)
+A Full Control Python effector, last in every Cloner's list, hides clones by a fixed order: user
+data Build (percent, 0..1), Order in a layer (cycle), Layer overlap. Layers = Cloners whose
+effector list holds this effector, in Object Manager order (`ie.ObjectFromIndex(doc, i) == op`;
+use `==` on wrapped objects). Piece order is sorted from the Cloner's point cloud (modelled
+centres), cached in a module global keyed by `gen.GetGUID()`, count, mode and the cloud's
+`GetDirty(c4d.DIRTYFLAGS_DATA)`. It only clears `MOGENFLAG_CLONE_ON`, so it combines with other
+hiding effectors. User data read by name with `op.GetUserDataContainer()`. 53 Cloners, 31,715
+clones: 56–141 ms per evaluation; counts matched the formula at every Build value tested, and
+user data and code survived save + load. Equal time per layer means sparse top layers take half the
+slider — offer time by piece count if that matters.
