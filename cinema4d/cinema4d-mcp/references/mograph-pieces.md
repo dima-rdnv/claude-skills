@@ -60,3 +60,10 @@ slider — offer time by piece count if that matters.
   puts the new layer on top (Normal blend overrides what's below); switch a layer off with
   `L.SetLayerFlags(L.GetLayerFlags() | c4d.FIELDLAYER_FLAG_SKIP)` on a copy of `eff[c4d.FIELDS]`, then
   assign it back. The visibility effector and a hide-only Python effector combine as AND.
+- Capping open prototypes (verified 2027.0): boundary edges = edges used by one polygon, chained
+  along their direction in that polygon into loops. One centre point per loop and a triangle fan
+  that runs each boundary edge backwards keeps the cap's winding consistent with the sides. Check
+  each fan triangle's normal against the cap's outward axis, dry-run on `GetClone()` copies, then
+  `ResizeObject` + `SetPoint/SetPolygon` + `MSG_UPDATE` with `add_undo_change` first. Editing one
+  prototype updates every Multi-Instance clone of it. Loops whose corners come in coincident pairs
+  are zero-width unwelded seams, not holes — leave them.
