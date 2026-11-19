@@ -31,6 +31,13 @@ closest camera distance.
 - **`DESC_MAX` clamps the value you initialise it with.** A spot falloff the user had set to 90° became 60° (the
   control's max), and the driver then wrote 60° to the light. Set limits wider than any plausible value, and compare
   every driven value with the saved file (`LoadDocument` read-only) after installing.
+- **Removing user data and adding new entries reuses the freed ids, and the old stored value stays behind with its
+  old type.** A REAL control added on the id of a removed LONG one raised `__setitem__ expected int or bool, not
+  float`, and two others read empty. Fix: after `RemoveUserData`, clear the stale values with
+  `op.GetDataInstance().GetContainerInstance(c4d.ID_USERDATA).RemoveData(id)` before `AddUserData`; then plain
+  assignment works. Display order inside a group follows insertion order, not the id.
+- Ratios between emitters as controls: one total plus normalised share sliders (rate_i = round(total * w_i / sum w)),
+  so the shares need not add up to 100 %.
 - Know the parameter type before mapping a bool onto it: RS Camera `[12110]` is an enum (1 Off, 0 Render Settings,
   2 Override); `True` wrote 1 = Off.
 
