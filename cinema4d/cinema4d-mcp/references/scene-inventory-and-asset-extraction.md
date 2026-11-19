@@ -140,6 +140,22 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
     (recessed ear position, as on real switches), so the ears sit on the rails.
   - Moving the device back onto the rails instead made it 14–16 % smaller on close cameras (it was 2–3
     m away). Measure the camera distance first, then pick.
+- **Recovering the camera of an old still** (no record of the camera or take, verified Nov 2026):
+  - **Rule out existing renders first.** Correlate the still against every frame of the project's
+    render sequences and videos. Scores near 0.1–0.3 mean no match; a real one is far higher.
+  - **Coarse grid:** put a camera in a copy of the scene the still shows (old content). Key it with
+    step interpolation, one candidate per frame (position, focal), and render the grid with the
+    Viewport renderer through Commandline: 480×300 ran at about 14 frames/s, 2,460 candidates in 3
+    min.
+    - Save the copy next to the original so relative textures resolve; a copy in a temp folder
+      rendered untextured. Delete it afterwards.
+    - Hide effects the still doesn't have.
+  - **Edge correlation against untextured or differently lit renders only narrows the range.** Pick
+    the final camera visually: render a dozen candidates in the still's own look with fast Redshift
+    previews and put them next to the reference. Reading the still also helps: here, which sides of
+    known units faced the camera placed it behind them.
+  - Redshift PNGs keep alpha 0 behind the scene even with a camera-visible white dome: composite over
+    white before writing JPGs.
 - **Quick frames of a heavy scene:** use the scene's own takes with `Commandline -oresolution W H`
   (10–30 s per frame at 721×450). Brighten dark frames only for inspection.
 - **Launch failures:** Git Bash launches of Commandline and c4dpy started to fail instantly (exit 139,
