@@ -71,6 +71,8 @@ Gratings send spectral colours to the camera depending on angle; a reflection ti
 ## Camera post effects (RS Camera)
 - Bloom **mode** `[12110]` is an enum, not a switch: **1 Off, 0 Render Settings, 2 Override**. Writing `True` (= 1)
   turned bloom OFF. Use 2 to enable it on the camera, plus `[12100]` (enable inside the override).
+- **The camera wins over the render settings:** with the camera's mode on Override, bloom rendered although it was
+  off in the render settings. Leave camera post effects on 0 (Render Settings) unless a shot needs its own.
 - Bloom threshold `[12101]` (default 20: too high for most scenes; 2 used), intensity `[12103]`, softness `[12102]`.
   Flare `[12214]` (mode, same enum presumably — check) / `[12200]`, intensity `[12206]`, threshold `[12201]`.
   Streak `[12307]` / `[12300]`, number `[12304]`, angle `[12305]`. The render settings' RS videopost had no bloom

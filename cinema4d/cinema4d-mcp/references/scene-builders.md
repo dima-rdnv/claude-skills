@@ -28,6 +28,12 @@ closest camera distance.
 - A Python tag (`1022749`, code in `c4d.TPYTHON_CODE`) on the null reads its user data and writes the targets
   **only when a value differs**. Initialise every control from the current scene value so installing changes
   nothing; check that by comparing values before and after one `ExecutePasses`.
+- **A one-way driver fights the user:** any value they change on the driven object snaps back to the control's value
+  (a camera bloom set to Override kept coming back). Make 1:1 parameters two-way: remember the last value pushed per
+  (object, parameter) in a module dict; if the object's value differs from it while the control still equals it,
+  copy the object's value into the control, else push the control. Verified: editing a light's intensity directly
+  updated the null's control; changing the control updated the light. Keep derived values (sums, sizes) one-way and
+  say so in the control names or a note.
 - **`DESC_MAX` clamps the value you initialise it with.** A spot falloff the user had set to 90° became 60° (the
   control's max), and the driver then wrote 60° to the light. Set limits wider than any plausible value, and compare
   every driven value with the saved file (`LoadDocument` read-only) after installing.
