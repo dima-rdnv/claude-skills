@@ -272,3 +272,7 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push;
    in a public repo keep personal names and client details out of the text. Tell the user in one line
    what changed.
+- `td.AddTake(name, parent, cloneFrom)`: the 3rd argument CLONES that take (names came out "Hero.1", "Hero.2"), and a
+  new take goes in as the **first** child of `parent` — add in reverse order with `None` (verified 2027.0).
+- One BaseOverride per object: two parameters overridden on one light show as one entry in `GetOverrides()`. Light
+  on/off per take: override `ID_BASEOBJECT_GENERATOR_FLAG` (906) with `DescID(DescLevel(906, DTYPE_BOOL, 0))`.

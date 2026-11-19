@@ -240,3 +240,24 @@ After any session that used Houdini/Cinema 4D via MCP, or whenever something new
 4. Keep each SKILL.md under ~300 lines; split into a new sub-skill or `references/` when it grows.
 5. Re-package every changed skill (keep names) and, if the skills live in a git repo, commit and push.
    Tell the user in one line what changed.
+## Falling light streaks: Tracer on native particles, exact landing (verified C4D 2027.0, macOS)
+- **Tracer 1018655 traces a native Particle Group:** Trace Link `[1100]` (InExcludeData with the group), mode
+  `[1110]` 0 paths. **Without a limit, dead particles' trails stay forever** (+1 segment per emitted particle).
+  Limit `[1101]` 2 (From End) + Amount `[1102]` N frames keeps the last N frames, and dead trails drain away within
+  N frames. At 1500 cm/frame and N = 6 every streak was a full-height shaft while its particle held on the ground.
+- RS Object tag on the Tracer renders it as RS curves: `[9000]` 33 (cylinders), `[9001]` thickness (cm); emissive
+  material on the Tracer. Give the group an RS tag `3000=0` so the particles themselves don't render. One Tracer
+  per thickness class (thickness is per object).
+- Basic Emitter circle: **`[1002]` size is the DIAMETER** (max particle radius ≈ size / 2).
+- **Collide modifier 1061841** (`2001` 0 Collide / 1 Kill / 2 Repel, `2003` bounce, `2008` dynamic friction,
+  `2004` simulation-tag list, `2005` 1 Exclude = all tags) with a **Collider tag 100004021** on the surface stopped
+  particles at moderate speeds, but at 1500 cm/frame they **rebounded at ~22 % of their speed even with bounce 0**.
+- **Exact landing instead:** Condition 1060726 `60001=3` (Position), `70004=1` (Y), `2006=5` (≤), `2008=h`, with two
+  Math children: velocity `2011=4`, `2012=5` XYZ, `2014=2` constant, `2003=4` Assign, `2008=Vector(0)`; position
+  `2011=3`, `2012=1` Y, `2003=4`, `2007=h`. Every particle then sat exactly at h and every trail ended there.
+  Lifetime = fall height / speed + hold time → particles die on the surface.
+- **Commandline renders a single frame of a native particle + Tracer scene correctly** (it simulates from the start:
+  streaks at `-frame 30 30` with no cache). `ExecutePasses` on a fresh document jumped to frame 30 gave 0 particles:
+  no pre-roll there, so step from frame 0 when checking in a script.
+- Controls in a scene: a Python tag on a null pushing user data to emitters (`10004` rate, `1002` size, `10409`
+  speed, `10301` lifetime, position) and Tracers (`1102`, RS tag `9001`) worked live (write only on change).

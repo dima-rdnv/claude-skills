@@ -24,3 +24,13 @@ waiting (0 CPU), the RS log quiet since before the job started, and ping unanswe
 showed a Team Render job of the open scene still finishing a frame every ~20–25 s on two machines.
 That is busy, not dead: restarting would kill the job (the Team Render server lives in that C4D). Tell
 the user to let it finish. Whether the GUI comes back by itself after the job ends is unverified.
+
+## macOS (verified 2027.0, Nov 2026)
+- `sample <pid> 2 -file /tmp/s.txt`, then read the `com.apple.main-thread` block. A "stall" seen this way: a mouse-down
+  in a window → `python.xlib` `PyObject_CallMethod` → a modal event loop (`nextEventMatchingMask`) redrawing the
+  viewport, which re-evaluated a heavy scene (31k clones with a Python effector) — busy in a UI interaction, not an
+  MCP script. Percent CPU stayed low (12–26 %).
+- `~/Library/Preferences/Maxon/Maxon Cinema 4D <ver>_<id>/prefs/mcp/audit.log` lists every MCP call with
+  timestamps (COMMAND / EXEC_PYTHON / EXEC_RESULT / RESPONSE): a logged `ping` without a RESPONSE means the main
+  thread is busy; the last EXEC tells whether a script of yours could be the cause.
+- A force-quit leaves no `_bugreports` entry and no autosave; tell the user which unsaved work is likely lost.

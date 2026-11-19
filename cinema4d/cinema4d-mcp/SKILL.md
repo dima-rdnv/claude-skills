@@ -138,6 +138,9 @@ Python, stop the queue in its window; (5) test frames go through `Commandline.ex
 - Split merged meshes into their loose pieces as MoGraph clones and drive them with fields (Fracture
   Explode Segments, shared Plain effector, `MSG_MENUPREPARE` on Python-made effectors) →
   `references/mograph-pieces.md`.
+- Builders that make a new file (New Project, refuse to overwrite, clean up on error, shared code via exec),
+  viewport clipping for z-fighting thin offsets, user-data controls with a Python-tag driver (and the DESC_MAX
+  clamp trap), Python Generator with a sampled FieldList → `references/scene-builders.md`.
 - Model hardware from a reference image with code (kit of parts + instances, perforated panels with
   real full holes via spline + Extrude, decals, camera matching, compare renders) →
   `references/procedural-hard-surface.md`.

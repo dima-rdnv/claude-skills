@@ -24,3 +24,9 @@
   `/usr/bin/python3` runs it. `scripts/c4d_mcp_call.py` has Windows paths — point its C4D, RELAY and
   TOKEN at these. Pass `"undo": true` in the exec_python arguments for edits. `capture_viewport`
   answers with an `image` content item (base64 `data`, `mimeType` image/png) — decode it to a file.
+- macOS Commandline (verified 2027.0): `"/Applications/Maxon Cinema 4D 2027/Commandline.app/Contents/MacOS/Commandline"
+  g_licenseModel=LICENSEMODEL::MAXONAPP -render scene.c4d -take NAME -frame F F -oresolution W H -oimage /abs/prefix`
+  rendered Redshift while the GUI was open (6–90 s per small frame). The file name came out `prefix_0030.png` for one
+  scene and `prefix0030.png` for another (render-setting name format): list the folder rather than guess.
+- A relay call that gets no answer within the client's timeout keeps waiting in C4D; kill your own relay
+  processes before C4D frees up, or the queued request runs later.
