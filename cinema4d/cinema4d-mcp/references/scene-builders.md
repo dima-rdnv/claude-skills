@@ -57,3 +57,9 @@ closest camera distance.
   `fl.SampleListSimple(op, c4d.modules.mograph.FieldInput(points, n), c4d.FIELDSAMPLE_FLAG_VALUE).GetValue(i)`.
   Used to thin street lamps out from the centre: a spherical field (Size `1000` = radius, Inner Offset `1005007`) gave
   11 → 0.9 lamps per m² from the centre to the rim. Keep field objects outside the generator (siblings).
+- A generator can return a null with several linear splines (one per width class: RS curve thickness is per
+  object), each carrying its own RS Object tag (`9000=33`, `9001`) and texture tag; Redshift rendered them as curves
+  with that material (verified, ~11k two-point segments in 8 splines).
+- A Python-tag driver can change a node material's port (e.g. emission weight) through
+  `graph.BeginTransaction()`: do it only when the value changed and only when `c4d.threading.GeIsMainThread()`.
+
