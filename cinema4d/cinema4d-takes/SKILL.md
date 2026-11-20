@@ -240,6 +240,23 @@ print(br.GetActiveRenderSettingsName(n))                   # -> the take's rende
   trust the take, not that index.
 - Save the file before adding the jobs; each job loads the file from disk when it starts.
 
+### Queue order: the user's "progressive JPEG" method (user preference, 2026-11-20)
+Like a progressive JPEG that shows the whole picture coarse first and sharpens it later: get every
+change into the edit first, improve quality afterwards.
+1. **First:** takes whose content changed after feedback (new animation, fixed positions, new
+   camera moves), at the quality they need to read in the edit.
+2. **Low priority:** quality-only re-renders of unchanged shots (less noise, more samples, higher
+   resolution, a lowered bump).
+3. **Last:** jobs of other projects the user ranks lower; they stay enabled behind the rest.
+- Insert new jobs in front of lower-priority rows with `br.AddFile(path, row)` (it inserts at that
+  index); don't delete and re-add the user's rows to reorder them.
+- Set Team Render per job (`br.SetUseNet(row, bool)`): jobs whose scene references big Redshift Volume
+  sequences stay local, because Team Render copies every referenced sequence whole (hidden ones too) to
+  the client's system drive and fails as "Missing Textures" when it fills.
+- Point every job at a new, empty output folder; check before adding (a job writes wherever its
+  render setting points).
+- Add jobs, don't start the queue unless the user said so; report the order.
+
 ## Split a shot into passes so parts can be re-rendered alone (verified 2027.0, Redshift)
 - Under each shot/camera take, one child take per pass; the shot take keeps camera, overrides and its
   render setting (e.g. a range child "0-417"), the passes inherit them and only add an override group:
