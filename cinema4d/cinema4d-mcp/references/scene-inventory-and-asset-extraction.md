@@ -140,6 +140,18 @@ Scripts in `../scripts/` (run with `c4dpy g_licenseModel=LICENSEMODEL::MAXONAPP 
     (recessed ear position, as on real switches), so the ears sit on the rails.
   - Moving the device back onto the rails instead made it 14–16 % smaller on close cameras (it was 2–3
     m away). Measure the camera distance first, then pick.
+- **Which objects does a marked-up render point at?** Use the camera that reproduces that render.
+  Ray-cast through each mark into a `doc.Polygonize()` copy:
+  - prefilter by a bbox slab test, then `utils.GeRayCollider` per candidate (ray in object space);
+  - skip cables and plugs so the ray lands on the device behind them.
+
+  Then confirm, because a camera that's slightly off picks the neighbour at the frame edge:
+  - highlight the picks in a Viewport render (display colour, textures off);
+  - and, decisively, read each candidate's texture.
+
+  Downloaded cabinet models are often split into one object per material, not per device. The
+  photo texture (here, a vendor's trim and labels) identifies the device; the object number alone
+  doesn't. Copies of the same model share the numbering, so one pick covers every copy.
 - **Recovering the camera of an old still** (no record of the camera or take, verified Nov 2026):
   - **Rule out existing renders first.** Correlate the still against every frame of the project's
     render sequences and videos. Scores near 0.1–0.3 mean no match; a real one is far higher.
