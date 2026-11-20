@@ -239,6 +239,12 @@ print(br.GetActiveRenderSettingsName(n))                   # -> the take's rende
   recipe above raises. `GetActiveCameraIndex` works but did not line up with `GetAllCameraNames` —
   trust the take, not that index.
 - Save the file before adding the jobs; each job loads the file from disk when it starts.
+- 2027.0 (2026-11-20): `GetAllTakeNames(n)` failed again ("Required argument 'takeOnly' (pos 3)", yet
+  "takes at most 1 argument") and `SetActiveTakeIndex` needs its third argument (`takeOnly`); stepping
+  the indices as above works. It is **slow on heavy files**: 7 jobs over a scene with 47 takes kept
+  C4D's main thread busy for ~15 min ("Not Responding", the relay timed out while it carried on) — run
+  it when the user can spare the GUI and check `Responding` before the next call. There is no
+  `GetUseNet` getter; `SetUseNet` per row works.
 
 ### Queue order: the user's "progressive JPEG" method (user preference, 2026-11-20)
 Like a progressive JPEG that shows the whole picture coarse first and sharpens it later: get every
