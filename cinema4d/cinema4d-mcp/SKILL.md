@@ -208,6 +208,9 @@ c4d.documents.SaveDocument(xdoc, out, c4d.SAVEDOCUMENTFLAGS_DONTADDTORECENTLIST,
 - Fast camera sampling: `doc.ExecutePasses(None, True, True, False, c4d.BUILDFLAGS_NONE)` (caches
   off) evaluates animation without rebuilding generators.
 
+- Deformers on MoGraph clones (no Deformer effector in 2027; a Python effector that follows a deformer), the Collision deformer
+  (colliders need list flags 3; stateless solving pops) and Instance scale inside a Cloner → `references/deformers-and-clones-from-python.md`.
+
 ## Working with the bridge (verified on the community plugin; mostly general)
 - (community plugin) `execute_python_script` echoes EVERY top-level variable back — big lists blow the 1 MB result
   limit. Always wrap scripts in `def main(): ...` + `main()`. Big strings (e.g. Python tag code) go
