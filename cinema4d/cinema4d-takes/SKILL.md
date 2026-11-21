@@ -262,6 +262,9 @@ change into the edit first, improve quality afterwards.
 - Point every job at a new, empty output folder; check before adding (a job writes wherever its
   render setting points).
 - Add jobs, don't start the queue unless the user said so; report the order.
+- One GPU, two Redshift jobs: a Team Render "Local Machine" job and a Commandline render on the same card compete for VRAM.
+  Seen 2027.0 (2026-11-21): the Commandline process died silently mid-frame, and the Local Machine failed fast and wrote 65 BLACK
+  frames (alpha 1, one per second) that look finished. Keep one Redshift job per GPU, or scan every output for black frames.
 
 ## Split a shot into passes so parts can be re-rendered alone (verified 2027.0, Redshift)
 - Under each shot/camera take, one child take per pass; the shot take keeps camera, overrides and its
