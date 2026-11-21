@@ -88,6 +88,9 @@ br.EnableElement(i, False)                                              # skip a
   Seen again (2027, 7 rows of one 63 MB file added in a row): rows 2–7 flagged although `SetCheckTexture(False)` was called
   before `AddFile`; the queue still rendered each of them when it got there. Don't re-add such rows — a second row with the
   same output gets the Incremental Image Name rename.
+  Third time (2027, 2026-11-21): a row flagged "Error – Missing Files" since `AddFile` the evening before (status 1004) went to
+  "In Progress" when the queue reached it and rendered correctly; c4dpy `GetAllAssetsNew` had found nothing missing.
+- Finished rows can disappear from the queue on their own while it runs (2027): look rows up by file name, never by a stored index.
 - `BatchRender.DelFile(i)` returned False and removed nothing (2027, queue idle) — rows can only be switched off
   (`EnableElement(i, False)`). A new row whose output path equals an old row's (even an errored, disabled one) gets the
   **auto-renamed `_i1` path** ("Incremental Image Name"): give re-queued jobs a new output path instead.

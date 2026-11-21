@@ -265,6 +265,13 @@ change into the edit first, improve quality afterwards.
 - One GPU, two Redshift jobs: a Team Render "Local Machine" job and a Commandline render on the same card compete for VRAM.
   Seen 2027.0 (2026-11-21): the Commandline process died silently mid-frame, and the Local Machine failed fast and wrote 65 BLACK
   frames (alpha 1, one per second) that look finished. Keep one Redshift job per GPU, or scan every output for black frames.
+  Second failure seen the same day: a run of 77 frames written ~2 s apart with the missing-texture checker (pink), no Redshift
+  volumes, and two of them RGB only (no alpha). File size does not catch either case (broken 2.3–3.7 MB vs good 3.7 MB); per-frame
+  mean RGB against the shot's median does (broken ~1.2 vs 0.43–0.50), and so does the write interval (seconds instead of minutes).
+- Re-render a broken frame range as its own queue row, not with Commandline next to the queue: move the broken frames into a
+  `_broken` folder, byte-copy the scene (`<scene> fix <a>-<b>.c4d`), set only that render setting's `RDATA_FRAMEFROM/TO` in a
+  GUI-process `LoadDocument` (no tab) + `SaveDocument` of the copy, reload to verify, then `AddFile` it after the running job with
+  the same render setting and Team Render. Same output path, so the fix frames land in the shot folder.
 
 ## Split a shot into passes so parts can be re-rendered alone (verified 2027.0, Redshift)
 - Under each shot/camera take, one child take per pass; the shot take keeps camera, overrides and its
