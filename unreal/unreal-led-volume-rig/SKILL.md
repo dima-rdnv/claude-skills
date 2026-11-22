@@ -58,3 +58,17 @@ A 750 MB scene loaded in ~40 s.
   focal)), then crop columns ±(sensor_w/2)/focal and rows to tan range [(-h/2 + v_off)/focal,
   (h/2 + v_off)/focal] (px = W/2 per tan unit, rows through the pitch). Matched an MRQ frame of the same
   shot within ~8 %. No DoF, and editor-preview lighting.
+
+## A rig that moves (camera path from C4D, verified Nov 2026)
+- When the C4D rig null is animated, skip the parent actor: read the null's world matrix every frame (c4dpy, frames stepped
+  in order) and each camera's local matrix once, then key every CineCamera's own transform per frame in the master
+  sequence (`MovieScene3DTransformTrack`, channels loc x/y/z, rot roll/pitch/yaw;
+  `ch.add_key(unreal.FrameNumber(f), v, 0.0, unreal.MovieSceneTimeUnit.DISPLAY_RATE, unreal.MovieSceneKeyInterpolation.LINEAR)`).
+  Rotation from the C4D camera axes through the import's axis mapping: `make_rot_from_xz(M(v3), M(v2))`.
+- With an FBX/Interchange-imported scene the mapping is UE = C4D (x, -z, y) (not the (z, x, y) of a hand-built room): the
+  front camera faces -Y (yaw -90), left -X, right +X - build the cameras with the same mapping as the geometry.
+- **Unfolded check**: render one frame per wall at full size and paste them into the unfolded box - the walls tile at one
+  pixel density (e.g. 2884 px over a front of 2 x 0.5473 eye-units = 2635 px/unit; side walls 2560 px over depth
+  0.0284..1.0, ceiling 2882 px over -0.0939..1.0, floor 2342 px over 0.1118..1.0): front at (side_w, top_h), left at
+  (0, top_h), right at (side_w + front_w, top_h), top at (side_w, 0), floor at (side_w, top_h + front_h). Lines must run
+  straight across every edge.

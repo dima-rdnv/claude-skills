@@ -194,3 +194,14 @@ pivot lies within the radius switch exactly then, ignoring the field (a hero tre
   `compression_settings=TC_SINGLE_FLOAT` (R32F), `mip_gen_settings=TMGS_NO_MIPMAPS`,
   `never_stream=True`, `address_x/y=TA_CLAMP`. Import goes through Interchange in 5.8.
 - Row 0 of the PNG = V 0 of the texture.
+
+## Path tracer specifics (verified 5.8, Nov 2026)
+- **Object invisible to camera but lighting the scene / in reflections**: `MaterialExpressionPathTracingRayTypeSwitch`
+  (inputs `Main`, `Shadow`, `IndirectDiffuse`, `IndirectSpecular`, `IndirectVolume`) into the opacity mask, Main 0, others 1,
+  blend Masked. Turning off Render In Main Pass on the component removed its emitted light as well.
+- **No ddx/ddy in the path tracer**: procedural bump must use an analytic gradient (Custom node returning a world normal,
+  `tangent_space_normal = False`), not derivative-based normals.
+- **Every `.hdr` imports as a TextureCube** (even a 1024x4 gradient). For 1D lookup textures use a 16-bit PNG with linear
+  values, `srgb = False`, `TA_CLAMP` addressing, sampler type `SAMPLERTYPE_LINEAR_COLOR`.
+- Non-power-of-two textures get no mips: `power_of_two_mode = STRETCH_TO_POWER_OF_TWO` (UV-mapped atlases map unchanged).
+- Emissive materials light the scene in the path tracer only with the PPV's `path_tracing_enable_emissive_materials` on.

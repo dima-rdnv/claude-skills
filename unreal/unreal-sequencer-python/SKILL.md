@@ -211,7 +211,18 @@ sub.render_queue_with_executor(unreal.MoviePipelineNewProcessExecutor)          
   3 min 45 s including start-up) — the "fast" preset. ffmpeg 7.1 can't decode DWAB EXRs (black frames). Start-up ~1-3 min; the first run
   after material changes also compiles shaders (~7 min, 16 ShaderCompileWorkers).
 - Editor Python globals persist between remote runs: a module-level `X = globals().get("X", default)`
-  picked up 16 from an older run instead of the new default 8 — pass every such value explicitly.
+  picked up 16 from an older run instead of the new default 8 — pass every such value explicitly. Hit again (Nov 2026):
+  a stale `OUT` sent five test renders into an old folder while the wait loop watched an empty one. Pattern that can't
+  leak: `A = globals().pop("ARGS", {})` at the top, callers set `ARGS = {...}` right before `exec`.
+- **Path Tracer through MRQ** (5.8): remove `MoviePipelineDeferredPassBase`, add `MoviePipelineDeferredPass_PathTracer`;
+  `spatial_sample_count` = samples per pixel, temporal 1 (no motion blur), AA method None; the PPV's
+  `path_tracing_enable_denoiser` applies. RTX 4090, 2884x1800 interior (2.5M polys, Nanite): 48 spp 1.5-3.4 s per frame,
+  128 spp ~3.7 s, plus ~30 s process start-up per queue. Linear output for matching another renderer:
+  `MoviePipelineColorSetting.disable_tone_curve = True` + EXR.
+- **Geometry caches (Alembic) in a sequence**: binding + `MovieSceneGeometryCacheTrack`, `sec = tr.add_section()`,
+  `sec.set_range(...)`, `p = sec.get_editor_property("params"); p.set_editor_property("geometry_cache_asset", gc);
+  sec.set_editor_property("params", p)`. MRQ streams them (`GeometryCache.Streamer.BlockTillFinishStreaming=1` in its cvars).
+- `binding.get_display_name()` returns an `unreal.Text` - wrap in `str()` before `startswith`.
 - After Effects 26.5 (OCIO, ACEScg project) can import a multilayer EXR sequence as
   `ImportAsType.COMP_CROPPED_LAYERS` (one layer per EXR layer); `COMP` is refused.
 - Media (a title movie) in renders: a video file isn't frame-accurate in MRQ; use an image sequence. For

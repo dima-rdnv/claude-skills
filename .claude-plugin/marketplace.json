@@ -40,7 +40,7 @@
     },
     {
       "name": "unreal",
-      "description": "Unreal Engine 5.8 through Epic's Unreal MCP plugin and Python: materials, Level Sequences and Movie Render Queue, LED volume rigs, editor tools, content clean-up, Ultra Dynamic Sky",
+      "description": "Unreal Engine 5.8 through Epic's Unreal MCP plugin and Python: materials, Level Sequences and Movie Render Queue, LED volume rigs, editor tools, content clean-up, Ultra Dynamic Sky, Cinema 4D + Redshift scenes into Unreal (Path Tracer)",
       "source": "./",
       "strict": false,
       "skills": [
@@ -50,7 +50,8 @@
         "./unreal/unreal-led-volume-rig",
         "./unreal/unreal-editor-tools",
         "./unreal/unreal-content-management",
-        "./unreal/unreal-ultra-dynamic-sky"
+        "./unreal/unreal-ultra-dynamic-sky",
+        "./unreal/cinema4d-to-unreal"
       ]
     },
     {

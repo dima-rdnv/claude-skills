@@ -1,0 +1,100 @@
+---
+name: cinema4d-to-unreal
+description: Moving a Cinema 4D + Redshift scene into Unreal Engine 5.8 for Path Tracer renders - baking and exporting the geometry (FBX, not USD), keeping material slots, translating Redshift node graphs into Unreal material instances by script, MoGraph animation as Alembic geometry caches, camera-invisible emitters, the axis mapping, and calibrating the Unreal look against a Redshift frame. Load with unreal-mcp (and cinema4d-mcp for the c4dpy side).
+---
+
+# Cinema 4D + Redshift -> Unreal 5.8 (Path Tracer)
+
+Verified Nov 2026: C4D 2027.0 (c4dpy) -> UE 5.8.4, a 2.5M-polygon rack scene with 17 instanced devices, 39 Redshift
+materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Result: framing identical, mean colour within
+3 % of the Redshift frame, ~4 s/frame at 128 spp 2884x1800 on an RTX 4090 (Redshift: 14 min/frame).
+
+## 1. Export the geometry from c4dpy (FBX, not USD)
+- **C4D 2027's USD exporter was not usable**: identical-looking (empty) Redshift node materials were merged into
+  `DisplayColor_*` materials (slot names lost), and render instances came out as cyclic references ("Cycle detected",
+  the instanced objects missing). glTF kept material names but every material plain white; FBX "Bake Materials" failed on
+  every node material ("Illegal state: Invalid Space"). No format carries Redshift graphs.
+- Work on `td.TakeToDocument(take)` of the take you render (take visibility baked in), keep only the subtree you need.
+- **Bake generators AND instances** with `MCOMMAND_CURRENTSTATETOOBJECT` (outermost visible generators first, repeat
+  2-3 passes; Python Generators, Cloners, Sweeps, Extrudes, Connect, Instance objects). Insert the result where the
+  generator was (`doc.InsertObject(new, parent=g.GetUp(), pred=g)`, `new.SetMg(g.GetMg())`), copy its texture tags.
+  Then delete what is not render-visible (first explicit on/off up the hierarchy wins; a disabled generator hides).
+  Unreal's Interchange re-shares identical meshes; Nanite doesn't mind the extra polygons.
+- Compare C4D objects with `==`, never `is` (each access returns a new Python wrapper: `o is not geo` removed `geo`).
+- **Material slots survive only as placeholders**: give every used material a unique FBX-safe name
+  (`re.sub(r"[^A-Za-z0-9_]", "_", name)`, `__2` for duplicates), dump its Redshift graph to JSON (section 3), then put a
+  classic `Mmaterial` with that name and a unique colour on the same texture tags and **remove every other material** from
+  the document (otherwise the exporter renames yours `Name.1`). The exporter still appends `.1` to some names and
+  Interchange turns `.` into `_` - match slots by stripping `[._]\d+$`.
+- FBX exporter ids (2027): 1023 Cameras, 1022 Lights, 1024 Splines, 1033 Instances, 1016 Triangulate, 1014 Normals,
+  1035 Up Axis (1036 = Y), 1034 Flip Z, 1004 Tracks, 1046 Takes (1047 None), 1005 Material, 1010 Embed Textures,
+  1029 Substances, 1039 Bake Materials. Set geometry + normals + material on, everything else off.
+
+## 2. Import into Unreal
+- `mgr = unreal.InterchangeManager.get_interchange_manager_scripted()`; `src = unreal.InterchangeManager.create_source_data(fbx)`;
+  `p = unreal.ImportAssetParameters(); p.is_automated = True`; `mgr.import_scene(dest, src, p)` -> static meshes (Nanite
+  already on) + actors with the hierarchy in the open level (1311 meshes in ~2 min).
+- **The scene import puts per-actor override materials on every StaticMeshActor** (its own placeholder materials). They
+  hide anything you assign on the mesh assets: clear them (`for i in range(c.get_num_materials()): c.set_material(i, None)`,
+  `c.set_editor_property("override_materials", [])`), then delete the placeholder materials.
+- **Axes**: Unreal (x, y, z) = Cinema 4D (x, -z, y) - for the FBX scene import and for Alembic with conversion
+  scale (1, -1, 1), rotation (90, 0, 0), flip V. Check once against a known object's position / a bbox.
+
+## 3. Translate the Redshift graphs (script, not rebuild)
+- Dump per material (c4dpy, maxon API): every node's asset id and every input port's value, plus its connection
+  (`port.GetConnections(maxon.PORT_DIR.INPUT, conns)` -> source node + port id). The `texturesampler.tex0` path is the
+  child port `path`. **Ramp knots**: the `rsramp.ramp` port has child ports `_0, _1, ...` with `position`, `color`,
+  `interpolation`, `bias` (a missing position = 0).
+- Two masters cover typical scenes:
+  `M_RS_Standard` (two-sided like Redshift's single planes): BaseColor vector or BaseTex (StaticSwitch) x weight,
+  Roughness, Metallic, Specular, EmissiveColor x EmissiveWeight, opacity mask from BaseTex.A or a MaskTex (StaticSwitches;
+  the MI switches its blend mode to Masked through `base_property_overrides`);
+  `M_RS_Clear`: translucent, refraction method Index of Refraction, BaseColor / Opacity / Roughness / IOR - for
+  `refr_weight` > 0.5.
+- Mapping from `standardmaterial`: base_color (+ base_color_weight), refl_roughness, metalness,
+  Specular = refl_weight x F0(refl_ior) / 0.08 (UE 0.5 = F0 0.04), emission_color x emission_weight,
+  opacity_color from `rscolorsplitter.outa` -> the base texture's alpha, from a texturesampler -> separate mask.
+  Not translated: ramps / colour layers on roughness, curvature, round corners, bump (constant fallback, note them).
+- Only translate what is visible: materials of hidden objects (e.g. replaced hardware) drop out; meshes reached only
+  through instances count as visible.
+- Textures: import the files the graphs point to (`relative:///` = relative to the .c4d folder), set
+  `power_of_two_mode = STRETCH_TO_POWER_OF_TWO` on non-power-of-two images (mips; the path tracer aliases without them).
+- A Substance node can't be exported: rebuild procedurally (world-position projection when the mesh has no UVs;
+  in the path tracer derive normals analytically - no ddx/ddy).
+
+## 4. MoGraph animation -> Alembic geometry caches
+- Tracer + Sweep + Cloner + Displacer setups bake fine to Alembic from c4dpy: select the Sweep objects, `ABCEXPORT_SELECTION_ONLY`,
+  frame range, `ABCEXPORT_GLOBAL_MATRIX`, UVs + normals on.
+- **The first Alembic export of a c4dpy session comes out empty (~1 KB)**, whichever object it is: export the first one twice.
+- Import: `AbcImportSettings` with `import_type = GEOMETRY_CACHE`, `conversion_settings` (preset CUSTOM, flip_v, scale,
+  rotation as above), `sampling_settings` frame range, `geometry_cache_settings.flatten_tracks = True`,
+  `apply_constant_topology_optimizations = False` (varying topology).
+- Play it in Sequencer: binding + `MovieSceneGeometryCacheTrack`, section over the range,
+  `params.geometry_cache_asset = <cache>` (set the struct back with `set_editor_property("params", ...)`).
+- Check placement: `comp.set_editor_property("manual_tick", True); comp.tick_at_this_time(t, False, False, False)` then
+  actor bounds against the C4D bbox at that frame (stepped from frame 0 - tracers need history).
+
+## 5. Lights
+- RS Dome with a texture -> SkyLight `SLS_SPECIFIED_CUBEMAP`. Unreal makes cubemaps only from `.hdr`/`.exr` (lat-long 2:1):
+  convert a JPG dome (sRGB -> linear, resize to 2:1 - Redshift stretches any image over the sphere) to `.hdr` with OpenCV.
+  **Every `.hdr` imports as a TextureCube** - use a 16-bit linear PNG for 1D gradients.
+- **Emitters invisible to camera** (RS Object tag, primary-ray visibility off) that still light the scene: in the path tracer
+  Render In Main Pass = off removed their light too. Use a `MaterialExpressionPathTracingRayTypeSwitch` (inputs `Main`,
+  `Shadow`, `IndirectDiffuse`, `IndirectSpecular`, `IndirectVolume`) on the opacity mask: Main 0, the rest 1; blend Masked.
+- Emissive ramps along a sweep: bake the knots (smooth-knot = smoothstep between knots) to a 1024x4 linear PNG, sample it at
+  the sweep's V. The V direction after Alembic import may be reversed - test both against the Redshift frame.
+
+## 6. Calibrate against a Redshift frame
+- Render the same frame linear from both (Redshift EXR; MRQ path tracer with `MoviePipelineColorSetting.disable_tone_curve`
+  and EXR), apply one sRGB curve to both, compare region means and chroma (r, g, b / sum) - hue errors show at once
+  (the reversed gradient: chroma 0.153/0.239/0.607 vs 0.195/0.144/0.661; fixed 0.193/0.135/0.672).
+- Dome rotation: render 0/90/180/270 deg, keep the best log-luminance correlation.
+- Light balance: render each light group alone (dome only, emitters only) and least-squares fit their weights to the
+  Redshift frame (weight 1/(value + eps) for relative error) - correlation 0.889 -> 0.930.
+- Cross-check noise at 100% +2 stops: 48 spp + denoiser blotches dark detail (keyboard keys); 256 spp is clean.
+
+## Unreal side, reusable
+- Five-screen LED rigs, per-screen shots and MRQ presets: `unreal-led-volume-rig`. Path tracer in MRQ: remove
+  `MoviePipelineDeferredPassBase`, add `MoviePipelineDeferredPass_PathTracer`; the spatial sample count is the spp.
+- Pass script arguments as one dict popped per run (`A = globals().pop("ARGS", {})`): editor Python globals persist
+  between remote runs, and a stale `OUT` sent a whole test render to an old folder.

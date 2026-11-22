@@ -205,6 +205,17 @@ ex[c4d.ABCEXPORT_GLOBAL_MATRIX] = True        # world-space points; NORMALS / UV
 c4d.documents.SaveDocument(xdoc, out, c4d.SAVEDOCUMENTFLAGS_DONTADDTORECENTLIST, c4d.FORMAT_ABCEXPORT)
 ```
 - Watch long exports from a shell (`stat` the file twice, check free disk).
+- **The first Alembic export of a c4dpy session comes out empty** (~1 KB, verified 2027.0, MoGraph tracer/sweep groups):
+  whichever object went first was empty and the next one fine - in the same run, exporting Right then Left, Right was
+  empty. Export the first object twice (throwaway pass), then check every file's size.
+- **USD export (2027.0) is not a scene-transfer route for Redshift scenes**: node materials that look identical were merged
+  into `DisplayColor_*` (slot names lost) and render instances became cyclic references (objects missing). FBX keeps slot
+  names; see `unreal/cinema4d-to-unreal` for the whole bake-and-export recipe.
+- Compare C4D objects with `==`, not `is`: each access returns a new Python wrapper (`o is not geo` was always True and
+  deleted the object to keep).
+- `c4d.documents.GetAllAssetsNew(doc, allowDialogs, lastPath, flags, assetList)` takes 5 arguments in 2027 (no separate
+  missing list) - check each entry's `exists`. A missing **font** (Text spline / MoText) counts too: the Render Queue flags
+  the job "Missing Files" for it.
 - Fast camera sampling: `doc.ExecutePasses(None, True, True, False, c4d.BUILDFLAGS_NONE)` (caches
   off) evaluates animation without rebuilding generators.
 
