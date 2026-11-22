@@ -57,6 +57,11 @@ br.EnableElement(i, False)                                              # skip a
   and a second listing call that asked each job's take froze the UI again ("Not Responding", but
   reading ~27 MB/s — busy, not dead; wait it out, never kill). Fill a big queue in one call, read
   back with `GetElement`/`GetElementStatus`/`GetJsonJobs()` only, and warn the user first.
+  Picking each job's take by stepping `SetActiveTakeIndex(job, i, False)` + `GetActiveTakeName(job)` until the name matches is
+  far worse on such a file (2027.0, 2026-11-22): 11 jobs of one 64 MB scene with ~50 takes kept C4D "Not Responding" for ~65 min
+  (one core at 100 %, memory flat); the MCP relay timed out, the script finished on its own and every job was right. Light
+  per-take scenes (e.g. Team Render per-shot copies) add in seconds; for many takes of one heavy file, work out each take's
+  index once from the document (depth-first, `Main` = 0) and set it directly *(unverified)*.
   `BatchRender` has `SetUseNet` (Team Render) but no `GetUseNet` — and `SetUseNet(job, False)` right after
   `AddFile` did NOT untick the Team column (the job rendered with Team Render: its log lists `.b3d` frames
   out of order). Ask the user to check the Team column before starting.
