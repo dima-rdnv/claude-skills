@@ -132,6 +132,23 @@ viewport gives e.g. 1400x444).
 - **Stop Play-In-Editor before editing assets**: while PIE runs, `EditorAssetLibrary.load_asset`
   returns None (asset scripting is blocked during play) → confusing `'NoneType'` errors.
   `EditorAppToolset.StopPIE` / `IsPIERunning` via MCP.
+- **A Movie Render Queue render process answers remote execution too** (UnrealEditor-Cmd.exe from the
+  new-process executor). With the editor down, code meant for the editor ran in the render process
+  ("'NoneType' object has no attribute 'get_editor_world'"). `scripts/ue_exec.py` now probes every node
+  and runs only on one with an editor world (`NO_EDITOR_NODE` otherwise; `UE_EXEC_ANY=1` skips the probe).
+- **Scripting without the GPU** (e.g. while a long render owns it): `UnrealEditor.exe <uproject> -nullrhi
+  -nosplash -unattended` gives a headless editor that takes remote Python (imports, materials, levels,
+  sequences all worked). It can't launch MRQ renders: the new-process executor copies the editor's
+  command line, `-nullrhi` included (job "finished" after 4 s, no image). Render from the shell instead —
+  save a `MoviePipelineQueue` asset (jobs with inline configs) and run
+  `UnrealEditor-Cmd.exe <uproject> /Game/Maps/L_X -game -MoviePipelineConfig="/Game/.../Q.Q" -windowed
+  -RenderOffscreen -resx=1280 -resy=720 -unattended -nosplash -log=X.log`. From Git Bash set
+  `MSYS_NO_PATHCONV=1`, or `/Game/...` arrives as `C:/Program Files/Git/Game/...` ("Failed to load package").
+- **Save imports right away**: `InterchangeManager.import_scene` leaves the new meshes/materials only in
+  memory; the level save doesn't write them. An editor crash after the import left a saved level whose
+  665 actors pointed at nothing — `EditorLoadingAndSavingUtils.save_dirty_packages(True, True)` after importing.
+  Deleting that map and creating a new one at the same path then brought the old actors back (the package
+  was still loaded): destroy actors whose `static_mesh` is None instead.
 
 ## Crash traps (each one killed the editor)
 - **Never load a map package as an ordinary asset and then `load_level()` it in the same session**

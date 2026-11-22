@@ -6,6 +6,9 @@ Usage (with the engine's own Python):
 Prints the editor's output; exits 1 with COMMAND_FAILED and the traceback if the code raised,
 2 if no editor answered (is Project Settings > Python > Enable Remote Execution on?).
 Set UE_ROOT if the engine is not in C:\\Program Files\\Epic Games\\UE_5.8.
+
+A Movie Render Queue "new process" render (UnrealEditor-Cmd.exe) answers remote execution too: this script probes
+every node and runs the code on the first that has an editor world (set UE_EXEC_ANY=1 to skip the probe).
 """
 import os
 import sys
@@ -32,7 +35,23 @@ def main():
         if not remote.remote_nodes:
             print("NO_UNREAL_NODE_FOUND")
             sys.exit(2)
-        node = remote.remote_nodes[0]
+        time.sleep(1.5)                                   # let every node answer the ping
+        nodes = list(remote.remote_nodes)
+        node = nodes[0]
+        if not os.environ.get("UE_EXEC_ANY"):            # probe even one node: it may be a render process
+            probe = ("import unreal\ns = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\n"
+                     "print('UE_EXEC_EDITOR' if s and s.get_editor_world() else 'UE_EXEC_OTHER')")
+            node = None
+            for n in nodes:
+                remote.open_command_connection(n["node_id"])
+                r = remote.run_command(probe, unattended=True, exec_mode=rx.MODE_EXEC_FILE)
+                remote.close_command_connection()
+                if any("UE_EXEC_EDITOR" in e.get("output", "") for e in r.get("output", [])):
+                    node = n
+                    break
+            if node is None:
+                print("NO_EDITOR_NODE (%d nodes, none with an editor world)" % len(nodes))
+                sys.exit(2)
         remote.open_command_connection(node["node_id"])
         res = remote.run_command(code, unattended=True, exec_mode=rx.MODE_EXEC_FILE)
         for entry in res.get("output", []):

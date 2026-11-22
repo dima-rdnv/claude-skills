@@ -114,6 +114,33 @@ materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Resul
   whether one variant is off.
 - Emissive translucent layers converge fast: 32 spp was within 1 % of 128.
 
+## 6b. Scenes lit by emissive geometry (moving mesh lights, light cards) - verified on a tunnel scene, Nov 2026
+- Redshift mesh emitters (glowing cylinders / tori / cards on cloners, often invisible to camera via the RS Object tag:
+  `2999` override with `2000` primary / `2006` reflection visibility absent) are what made its frames noisy and
+  flickering. In Unreal replace them with lights the path tracer samples directly: capsule point light per cylinder
+  (source_radius = r, source_length = h - 2r, axis = the light's X), N point lights around each torus ring, a pair of
+  back-to-back rect lights per card. Keep visible emitter meshes for the look with an emissive behind a
+  `PathTracingRayTypeSwitch` (Main = emission, others 0) and cast_shadow off on the mesh, so the light isn't doubled.
+  Parent everything to one animated actor when a null moves the emitter cloner.
+- **Path tracer light grid drops lights silently**: `r.PathTracing.LightGridMaxCount` (default 128, engine max 256 -
+  `RAY_TRACING_LIGHT_COUNT_MAXIMUM`) caps lights per grid cell. 421 lights with a 200 m attenuation radius each made the
+  full render 17x darker than one spot alone. Give lights realistic attenuation radii (50 m here), raise the cvar in
+  `[SystemSettings]`, and check that group-only renders add up to the full render.
+- 378 movable shadow-casting point lights crashed the GUI editor's raster viewport (classic cube shadow maps, D3D12
+  "Too many residency sets"): set `r.Shadow.Virtual.Enable=1` before spawning them (the path tracer doesn't care).
+- **Nanite fallback is what the path tracer traces** while `r.RayTracing.Nanite.Mode` is 0: a 1.85M-triangle scan had an
+  automatic fallback of 8k triangles. For hero meshes set `fallback_target = PERCENT_TRIANGLES`, `fallback_percent_triangles = 1.0`.
+- Redshift render-time displacement doesn't survive the export: bake it into a dense mesh in c4dpy (heights sampled with
+  numpy from the displacement map at the texture node's scale, e.g. 1 x 3; amplitude = displacement node scale x RS
+  Object tag scale), export FBX like the rest, keep normal / roughness maps in a small floor master.
+- Redshift spot / area lights ("image" units, Decay 0, cone + falloff angles) did not convert cleanly: neither a wide
+  cone nor no-decay fitted better than a physical narrow spot; fit them as groups. A Redshift file can also use a different
+  camera exposure than its sibling scene (here 3.7 stops) - fit an "emissive seen by camera" group to get it.
+- Redshift (IPC GI) carried emitter light 30+ m down shiny pipes; the path tracer doesn't. Expect such glows to be
+  missing and treat them as an art decision, not a calibration error.
+- Fit groups in LOG space on coarse blocks (12x12 px): linear least squares was dominated by one hot spot and zeroed
+  whole groups.
+
 ## 7. Passes (Redshift takes that hide object groups) -> sublevels
 - Move each pass's actors into a streaming sublevel: select them, then
   `unreal.EditorLevelUtils.create_new_streaming_level(unreal.LevelStreamingDynamic, "/Game/Maps/L_X_PassA", True)`
