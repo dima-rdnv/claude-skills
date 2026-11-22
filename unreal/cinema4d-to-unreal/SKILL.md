@@ -45,6 +45,15 @@ materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Resul
   (`port.GetConnections(maxon.PORT_DIR.INPUT, conns)` -> source node + port id). The `texturesampler.tex0` path is the
   child port `path`. **Ramp knots**: the `rsramp.ramp` port has child ports `_0, _1, ...` with `position`, `color`,
   `interpolation`, `bias` (a missing position = 0).
+- **Redshift enum values, MEASURED** (C4D 2027 + RS; one emissive plane per value, rendered with Commandline):
+  `rscolorcomposite.comp_mode` 0 = base, 1 = blend (over), 2 = average, **3 = add**, 4 = subtract (base - blend),
+  **5 = multiply**, 9 = screen (6-8 unclear: 7 ~ lighten/max, 8 ~ darken/min). `rsramp.inputmapping` 0 = along V,
+  1 = along U (with `inputsource` 2 = UV). Guessing 3 = multiply / 5 = min gave grey streak-only ribbons instead of the
+  coloured ones. To measure another enum: build the planes in c4dpy (constants via `SetPortValue(maxon.ColorA(...))`,
+  `maxon.Int32(...)`), render with Commandline; a fresh c4dpy document's output carries a colour transform (0.6 came out
+  0.44), so also render the inputs as reference planes and compare candidates through a 3x3 fitted from them.
+- Ramps of BOTH mappings combined in one shader (U streaks x V fades + V colour cycle) are 2D: bake a U x V texture
+  (512x512 was plenty) instead of a 1D gradient; emission above 1 needs a half-float EXR (imports as Texture2D).
 - Two masters cover typical scenes:
   `M_RS_Standard` (two-sided like Redshift's single planes): BaseColor vector or BaseTex (StaticSwitch) x weight,
   Roughness, Metallic, Specular, EmissiveColor x EmissiveWeight, opacity mask from BaseTex.A or a MaskTex (StaticSwitches;
@@ -82,7 +91,13 @@ materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Resul
   Render In Main Pass = off removed their light too. Use a `MaterialExpressionPathTracingRayTypeSwitch` (inputs `Main`,
   `Shadow`, `IndirectDiffuse`, `IndirectSpecular`, `IndirectVolume`) on the opacity mask: Main 0, the rest 1; blend Masked.
 - Emissive ramps along a sweep: bake the knots (smooth-knot = smoothstep between knots) to a 1024x4 linear PNG, sample it at
-  the sweep's V. The V direction after Alembic import may be reversed - test both against the Redshift frame.
+  the sweep's V. The V direction after Alembic import may be reversed - test both against the Redshift frame. For 2D
+  bakes give the master static switches SwapUV / FlipU / FlipV and render every combination (20 s each at half size):
+  correlation 0.92 vs 0.85-0.87 picked the orientation clearly (FlipV, as for 1D).
+- **A `TextureSampleParameter2D` with sampler type Linear Color and no default texture** compiles in the editor (the MIs
+  supply a texture) but FAILS in the MRQ render process ("Sampler type is Linear Color, should be Color for
+  DefaultTexture") - Unreal renders the grey default material there. Set `texture` on the node to a linear texture.
+  The render process logs to `Saved/Logs/<Project>_2.log`: grep it for "Failed to compile" after a surprising render.
 
 ## 6. Calibrate against a Redshift frame
 - Render the same frame linear from both (Redshift EXR; MRQ path tracer with `MoviePipelineColorSetting.disable_tone_curve`
@@ -92,6 +107,26 @@ materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Resul
 - Light balance: render each light group alone (dome only, emitters only) and least-squares fit their weights to the
   Redshift frame (weight 1/(value + eps) for relative error) - correlation 0.889 -> 0.930.
 - Cross-check noise at 100% +2 stops: 48 spp + denoiser blotches dark detail (keyboard keys); 256 spp is clean.
+- Emission vs lighting on a material: render emission-only (BaseColor 0, Specular 0) and lit-only (EmissiveWeight 0) -
+  the frame is linear in the two (|E + L - both| was 5 % of the mean) - and least-squares fit both weights to the Redshift
+  frame (blur 5x5 first: fine geometry never lines up). Translucent Redshift ribbons came out emission x 0.74, lighting
+  ~0 (correlation 0.986 -> 0.989, means within 2 %). Same trick per material variant (opacity 0 on the others) shows
+  whether one variant is off.
+- Emissive translucent layers converge fast: 32 spp was within 1 % of 128.
+
+## 7. Passes (Redshift takes that hide object groups) -> sublevels
+- Move each pass's actors into a streaming sublevel: select them, then
+  `unreal.EditorLevelUtils.create_new_streaming_level(unreal.LevelStreamingDynamic, "/Game/Maps/L_X_PassA", True)`
+  (True = move the selection). Keep cameras, sky, post-process volume in the persistent level.
+- Not exposed to Python in 5.8: `World.persistent_level`, `World.get_streaming_levels`,
+  `LevelStreamingDynamic.set_should_be_visible`. Use `actor.get_level().get_path_name()` to tell which level an actor
+  is in, `unreal.GameplayStatics.get_streaming_level(world, "L_X_PassA")` for the streaming object
+  (`initially_loaded` / `initially_visible` editor properties).
+- Bindings in the master sequence point at the old actor paths: rebuild the possessables (geometry-cache tracks) after the move.
+- Per pass a shot (subsequence of the master + camera cut) with ONE `MovieSceneLevelVisibilityTrack`: a VISIBLE section
+  naming its own sublevel and a HIDDEN section naming the other (`set_visibility`, `set_level_names`). MRQ warns that
+  blueprint-streamed sublevels are only guaranteed visible in a render when a visibility track controls them.
+  Verified: the Light pass rendered identical to before the split, the ribbon pass showed only ribbons.
 
 ## Unreal side, reusable
 - Five-screen LED rigs, per-screen shots and MRQ presets: `unreal-led-volume-rig`. Path tracer in MRQ: remove

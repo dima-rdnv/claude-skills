@@ -229,6 +229,17 @@ sub.render_queue_with_executor(unreal.MoviePipelineNewProcessExecutor)          
   an overlay we baked the frames into one tiled texture and picked the frame from the sequence time in
   a post-process material (exact, no media player) — see unreal-materials-python.
 
+## Render passes as sublevels (show one, hide the other per shot)
+```python
+tr = shot.add_track(unreal.MovieSceneLevelVisibilityTrack)
+for lvl, vis in (("L_Map_PassA", unreal.LevelVisibility.VISIBLE), ("L_Map_PassB", unreal.LevelVisibility.HIDDEN)):
+    sec = tr.add_section(); sec.set_range(start, end)
+    sec.set_visibility(vis); sec.set_level_names([lvl])          # level names, not paths
+```
+Verified 5.8 with MRQ path tracer renders. Name the shot's own level VISIBLE too: MRQ warns that blueprint-streamed
+sublevels are only guaranteed visible when a visibility track controls them. Making the sublevels and the API gaps
+(`World.persistent_level`, `get_streaming_levels` not exposed): `cinema4d-to-unreal` section 7.
+
 ## Checking in Play-In-Editor through the Unreal MCP
 `EditorAppToolset.StartPIE` with `{"options": {"bSimulate": false, "playMode":
 "PlayMode_InViewPort", "warmupSeconds": 6}}` (returns after warm-up), then

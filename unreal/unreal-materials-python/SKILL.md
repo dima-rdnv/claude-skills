@@ -203,5 +203,11 @@ pivot lies within the radius switch exactly then, ignoring the field (a hero tre
   `tangent_space_normal = False`), not derivative-based normals.
 - **Every `.hdr` imports as a TextureCube** (even a 1024x4 gradient). For 1D lookup textures use a 16-bit PNG with linear
   values, `srgb = False`, `TA_CLAMP` addressing, sampler type `SAMPLERTYPE_LINEAR_COLOR`.
+  Values above 1 (an emissive lookup): write a half-float `.exr` - it imports as a Texture2D (512x512 verified).
+- **Linear Color sampler without a default texture**: a `TextureSampleParameter2D` set to `SAMPLERTYPE_LINEAR_COLOR` with
+  no `texture` falls back to the sRGB engine DefaultTexture. The editor shows the MIs fine, but the Movie Render Queue
+  process fails to compile the material ("Sampler type is Linear Color, should be Color") and renders the grey default
+  material. Always set `node.set_editor_property("texture", <a linear texture>)`. That process logs to
+  `Saved/Logs/<Project>_2.log`, not the editor log.
 - Non-power-of-two textures get no mips: `power_of_two_mode = STRETCH_TO_POWER_OF_TWO` (UV-mapped atlases map unchanged).
 - Emissive materials light the scene in the path tracer only with the PPV's `path_tracing_enable_emissive_materials` on.
