@@ -164,6 +164,13 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   Depth, Color, Use Comp Frame Number, Time Span…) to prove they match before rendering.
 - `rq.render()` is synchronous: the bridge's JSON arrives when it's done (347 frames of a 2658 px UI
   comp ≈ 100 s); give `send.sh` a long timeout. Only QUEUED items render; DONE ones are skipped.
+  **It can stay blocked after the file is finished** (verified AE 2027, Nov 2026): an H.264 item (output template
+  "H.264 - Match Render Settings - 40 Mbps") had a complete MP4 on disk 4 min in, but `rq.render()` only returned
+  when the user closed a dialog AE was showing ~2 h later (heartbeat `aeWaiting` kept rising, AE "Responding").
+  When the output file stops growing and probes complete (`ffprobe -count_frames`), tell the user the file is ready
+  and ask them to close the dialog; keep saving the project as a separate later step, not after `rq.render()`.
+  Importing a sequence with missing frames inside `app.beginSuppressDialogs()` / `endSuppressDialogs(false)` did
+  not block (290 of 366 frames present).
 - A script that throws midway keeps its earlier edits (e.g. a half-configured queue item) — check
   the queue before retrying, and guard against adding a second copy.
 
