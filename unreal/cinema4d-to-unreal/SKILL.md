@@ -39,6 +39,15 @@ materials, MoGraph tracer/sweep light lines and a 5-screen LED camera rig. Resul
   `c.set_editor_property("override_materials", [])`), then delete the placeholder materials.
 - **Axes**: Unreal (x, y, z) = Cinema 4D (x, -z, y) - for the FBX scene import and for Alembic with conversion
   scale (1, -1, 1), rotation (90, 0, 0), flip V. Check once against a known object's position / a bbox.
+- **Switch off "Recompute Normals" after the import** (verified UE 5.8, Nov 2026). The C4D FBX does carry the Phong-tag
+  normals (`LayerElementNormal` in the file, no smoothing groups), but every mesh came in with `recompute_normals = True`:
+  Unreal threw them away and smoothed across all edges, so flat panels shaded like curved ones (visible gradient
+  facets on hex-vent plates and faceplates in the path tracer). Fix, per mesh, then save:
+  `sms = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem); bs = sms.get_lod_build_settings(sm, 0);
+  bs.recompute_normals = False; bs.recompute_tangents = True; sms.set_lod_build_settings(sm, 0, bs)` - the imported
+  normals are still in the source mesh, so no re-import is needed (1977 meshes rebuilt in ~7 min).
+- **Check both mesh settings right after any import** - the path tracer exposes them: normals (above) and the Nanite
+  fallback (section 6b: it is what gets traced).
 
 ## 3. Translate the Redshift graphs (script, not rebuild)
 - Dump per material (c4dpy, maxon API): every node's asset id and every input port's value, plus its connection
