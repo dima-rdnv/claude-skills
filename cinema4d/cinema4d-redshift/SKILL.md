@@ -27,6 +27,17 @@ description: Redshift in Cinema 4D through Python — node materials via the max
 - Read wiring: `conns = []; port.GetConnections(maxon.PORT_DIR.INPUT, conns)` → `conns[i][0]` is
   the source port (`.GetAncestor(maxon.NODE_KIND.NODE)` for its node). `maxon.PORT_CONNECTION_MODE`
   doesn't exist. Identify nodes by wiring, not by list order, before editing duplicates.
+- **One slider for a look** (verified 2027.0): `rsscalarconstant` (input `val`, output `out`) as the control,
+  one `rsmathrange` per driven setting (input ← the control, old 0..1, new = the setting at 0 and at 1), its
+  `out` connected into the setting's port. Connections into another Range's `new_min` / `new_max` and into
+  `rsvectormaker.y` are honoured by the render. Name a node with `node.SetValue("net.maxon.node.base.name",
+  maxon.String("…"))` (read it back with `GetValue`), so the user finds the control and a script can find and
+  remove its own nodes. Replace a wire: `in_port.RemoveConnections(maxon.PORT_DIR.INPUT, maxon.Wires.All())`,
+  then `Connect`. Pick the two ends so the middle equals the values the material already has, and assert
+  that before installing, so adding the control does not change the picture.
+- A re-wired graph that is equal only to float precision is **not pixel-identical**: the sampling noise
+  reshuffles (single pixels up to 0.2 apart in a noisy frame). Judge equality by the mean signed difference
+  (5e-6 here) and by 16×16 block averages (max 0.005, against 0.25 for the slider's own range).
 
 ## IDs (prefix `com.redshift3d.redshift4c4d.nodes.core.`)
 - `standardmaterial`: `.base_color`, `.base_color_weight`, `.emission_color`, `.emission_weight`,
@@ -66,8 +77,11 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
 - `rsmathrange` accepts old_min > old_max (inverted mapping) — verified.
 - Emission hex values rendered ~2–2.5 stops darker through the scene's view transform: measure the
   render and raise emission weight (3–6 here) rather than trusting the hex.
-- Graph edits inside `BeginTransaction` are not in exec_python's undo (`add_undo_change` covers
-  objects/tags only) — build on new or cloned materials and swap texture-tag links (undoable).
+- Graph edits are undoable once the **material** is registered (verified 2027.0 on a document copy):
+  `doc.StartUndo(); doc.AddUndo(c4d.UNDOTYPE_CHANGE, mat)`, the transaction, `doc.EndUndo()`; `DoUndo()` gave
+  back the original graph, node for node. Through the adapter, `add_undo_change(mat)` before the transaction
+  ran without its "not undoable" warning (Ctrl-Z in the GUI not tried). Without registering the material the
+  edit is not undoable: then give the script a `remove()` that restores the wiring.
 - (cause unknown) an `rsmathpow` inserted between a saturate and a colormix `mixamount` rendered 0;
   a `rsmathmul(t, t)` in the same spot worked.
 - Many RS point lights inside cloned rigs (66 here) made a 960×540 preview crawl (~15 % after 80 s);
@@ -113,6 +127,12 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   left 20–70 % of each droplet as a painted diffuse surface → it read as plastic. Clear liquid:
   `refr_weight` 1, tint by absorption (`refr_color` reached at `refr_depth`, in scene units — set the
   depth near the object size so small drops stay pale and big ones get the colour), IOR ~1.47.
+- **Something inside a tinted liquid** (a white body with red dots inside an amber droplet) comes out in the liquid's tint:
+  white read gold. Give it emission colour = target / `refr_color` per channel, normalised to max 1, emission weight ×
+  that max, `base_color_weight` 0 → it arrives at the camera close to the target colour (verified 2027.0: white + red
+  through `refr_color` (1, 0.74, 0.34)). Lit diffuse white alone stays yellow whatever its brightness.
+- A still rendered from an animation's render setting keeps its **motion blur** (spheres streaked along the particle
+  velocity): switch off `[60010]` (Basic) / `[40010]` (Advanced) on the Redshift videopost of the still's setting.
 - Transparent passes composited over a bright background: a uniform white dome makes clear droplets
   vanish (nothing to refract or reflect but white); a studio HDRI dome with camera contribution 0
   (`dome[10042] = 0`) gives the highlights and dark refracted edges that make them read as liquid.
@@ -142,6 +162,16 @@ Particle dust: emission-only (1.0, 0.80, 0.46) × 1.1 on a dark green comp reads
   focal)` (half the panel's FOV), then dolly along world Z. The panel's centre frames the subject at
   distance d0, and the Z motion converges on the panel's inner edge. At long lenses the turn (1.4° at
   750 mm, 6.8° at 150 mm) shows no visible keystone.
+
+## Thin film, iridescence and matching a reference still (verified C4D 2027.0)
+- Thin-film hue against thickness and film IOR (about 3° of hue per nm at IOR 2.0), why a low base IOR turns
+  the tint gold, camera-dependent fake diffraction, and the clone → Commandline loop for look-dev on an open
+  scene: `references/thin-film-look-dev.md`.
+
+## Textures missing after a scene moves between Mac and Windows (verified C4D 2027.0)
+- Absolute Mac URLs in `texturesampler` paths show as `./Users/…` on Windows and the Project Asset Inspector's
+  relink does not stick: set `relative:///<sub-folder>/<file>` on the path ports instead, and read the proof in
+  the Redshift log: `references/texture-paths-across-machines.md`.
 
 ## Script-built scenes: render settings and bevels (verified C4D 2027.0)
 - **A cloned Redshift videopost hung Commandline** ("Busy:Render Waiting until idle"): clone child render
@@ -184,6 +214,21 @@ Most shots need far less than Redshift's defaults; lower settings render faster 
   `[11016]/[11017]` size, `[11014]` normalize; dome `[12024]` intensity; `[10042]` camera visibility.
   Area lights shine along their +Z (aim like a C4D light). 3 area lights (intensity 2–6, 80–200 cm)
   + a dome at 0.25–0.6 (camera 0) lit a product row in cm scale.
+- **Mesh light** = RS Light type 3 (Area), `[11010]` Area Shape 4 (Mesh), `[11011]` the mesh object.
+  **Never hide that mesh with C4D render visibility off**: Redshift does not export it, logs `Mesh Object:
+  '…' not found` and `Could not update light mesh` on every update (IPR and final renders), and the light
+  emits nothing — a render with the light disabled was pixel-identical. With render visibility on the light
+  works and the shape shows to the camera while `[10042]` Camera is 1 (set 0 to keep the light and hide the
+  shape; that setting is unverified for mesh lights). Find dead lights by comparing a render with them off.
+- **A mesh light replaces its mesh's material.** The mesh renders as the light, in the light's colour and
+  intensity: with the light on, recolouring the mesh's emission material from blue to red changed no pixel;
+  with it off the material showed (verified 2027.0).
+- **The user's rule for anything that glows** (20 Nov 2026: "Can I control them via material? Let's other mcp
+  agents also do so if not requested otherwise"): the brightness and colour of an emissive element are set in
+  its **material** (emission colour and weight), and nowhere else. So, unless asked otherwise: no rig control,
+  tag, generator or script writes a material's emission; no mesh light is put on an emissive object, since it
+  takes the look over; the emissive geometry lights the scene through GI. A control that would duplicate the
+  material's value is left out rather than synced.
 - `texturesampler` exposes only `.outcolor` (no alpha output): drive `opacity_color` from a separate
   grey mask texture. Its `.scale` is a 2D vector and Python 2027 has no `maxon.Vector2d` — tile by
   writing UVs at true size (u = x / tile_width) instead.
