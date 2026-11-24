@@ -44,6 +44,10 @@ for r in (rd_parent, rd_child_a, rd_child_b):          # after the clones exist
 - One radius per material, so group parts of similar size under one material (radius about a
   quarter of the smallest width). At a quarter of the width the effect is subtle in wide shots.
 - Standard Material port for metals: `.metalness`.
+- **Facing-ratio ("X-ray") materials** whose look is opacity from a `fresnel` node (facing black → perpendicular white into
+  `opacity_color`): Round Corners into the Standard Material's bump alone does not reach the opacity. The `fresnel` node has its own
+  `.bump_input` — wire `roundcorners.out` into both (verified 2027.0, bucket mode): creases soften in the X-ray look. Clone the
+  material for the parts that should get it; render cost went from 20 s to ~80–120 s at 1920 with 16 samples.
 
 ## Many small parts from Python (tens of thousands)
 - Collect points and quads in Python lists and bake one `PolygonObject` per group
