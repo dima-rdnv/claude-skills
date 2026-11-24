@@ -272,7 +272,8 @@ proxies. The user prefers them to XRefs: lighter scenes, materials and textures 
   `[11002]` Preview Percentage 1.0, `[11000]` Show Bounding Box 0. `[12000]` Materials From: 0 Proxy File (default, used),
   1 Object, 2 Scene (match by name/prefix).
 - **Instances** (`Oinstance`, render-instance mode) of a proxy render correctly, also when the proxy sits in a hidden
-  "assets" group — the same pattern as hidden masters. Swapping embedded masters for proxies: put the proxy where the
+  "assets" group — the same pattern as hidden masters. But not when the proxy object's OWN render visibility is off: 800 instances
+  rendered nothing (2027.0); keep the master on and hide its parent group. Swapping embedded masters for proxies: put the proxy where the
   master was, relink every instance whose `INSTANCEOBJECT_LINK == master`, and if the exported asset was re-centred,
   compensate each instance with `mg.off -= mg.MulV(shift)`. Then delete the master and the materials only it used.
   Result in one scene: 153 MB → 79 MB, renders unchanged.

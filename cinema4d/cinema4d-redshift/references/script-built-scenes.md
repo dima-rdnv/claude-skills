@@ -51,3 +51,15 @@ for r in (rd_parent, rd_child_a, rd_child_b):          # after the clones exist
   (a 40 MB file). Share points along a swept shape so the Phong tag can smooth it.
 - A new Texture tag made in Python reads as Spherical projection: harmless for untextured
   materials, set `TEXTURETAG_PROJECTION` to UVW (6) when UVs matter.
+
+## Smooth shading of script-built and CAD parts (verified 2027.0, a facing-ratio "X-ray" material)
+- `c4d.BaseObject(c4d.Ocylinder / Osphere / Ocone / Otube / Olathe)` from Python gets **no Phong tag** (the menu adds one): it
+  renders flat-shaded, and a Fresnel / facing-ratio material shows every polygon as a band. `MakeTag(c4d.Tphong)` with an angle
+  limit (60°) fixes it.
+- CAD-tessellated revolved parts (long sliver triangles) still streak under a Fresnel material whatever the normals (imported
+  normal tags kept or removed). Rebuild them as a Lathe of their own profile: for a part revolved around its local Y, take the max
+  radius per point ring (`round(p.y, 3)` → `max(hypot(p.x, p.z))`), close the profile on the axis, Lathe 128 segments + Phong;
+  relink the instances that used the CAD mesh.
+- A lathed solid with an internal cavity from ONE closed profile works (outer contour down, inner contour back up). The legacy
+  Boole (`c4d.Oboole`) returned no geometry when that profile touches the axis twice (two poles with an axis segment between):
+  drill holes as uncapped cylinders (`PRIM_CYLINDER_CAPS = False`) instead.
