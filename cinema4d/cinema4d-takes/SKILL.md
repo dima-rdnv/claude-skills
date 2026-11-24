@@ -78,9 +78,16 @@ t.SetChecked(True)
   (64; 4031 instead of 4095). `c4d.CallCommand(431000108)` ("Lock Overrides") toggles it — works in
   c4dpy on the active document (`InsertBaseDocument` + `SetActiveDocument`); toggle back before saving
   to keep the owner's setting. Override groups and their tags work even while locked.
-- Object visibility (902/901) can't be a parameter override (None) — use override groups. A tag that
-  only some takes need: put it on the object with neutral values and override its parameters per take
-  (verified with an RS Object tag matte), or `og.AddTag(td, type, None)` on an override group.
+- Object visibility (901/902) and Enabled (906) as parameter overrides: they worked in 2027.0 with
+  `c4d.DescID(c4d.DescLevel(id, c4d.DTYPE_LONG, 0))` (`DTYPE_BOOL` for 906), checked through `TakeToDocument`; an earlier None
+  here was most likely the Lock Overrides above. Override groups work too. A tag that only some takes need: put it on the
+  object with neutral values and override its parameters per take (verified with an RS Object tag matte), or
+  `og.AddTag(td, type, None)` on an override group.
+- **Never override the same parameter in a parent take and its child** from Python: `FindOrAddOverrideParam` on the child
+  changed the PARENT's override (2027.0: every sibling then inherited the last child's value). Put a switchable parameter on
+  the child takes only, each with its own value where it differs from Main.
+- Two scene files into one file of takes (different frame rates, trimming, hiding, verifying each take against the old files
+  without rendering): `references/merge-files-into-takes.md`.
 - Never call `ov.UpdateSceneNode(...)` while building: it pushes the override value into the scene
   node of the current (Main) take.
 - `t.GetEffectiveCamera(td)` / `t.GetEffectiveRenderData(td)` return a tuple `(object, take)` that

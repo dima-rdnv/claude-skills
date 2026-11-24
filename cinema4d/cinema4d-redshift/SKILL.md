@@ -270,7 +270,9 @@ proxies. The user prefers them to XRefs: lighter scenes, materials and textures 
   exporter-made proxy rendered in 12 s. Reading the path back: `p[c4d.REDSHIFT_PROXY_FILE, c4d.REDSHIFT_FILE_PATH]`.
 - **Viewport preview** (the user wants full geometry, not a box): `[11001]` Preview = 2 (0 Off, 1 Bounding Box, 2 Mesh),
   `[11002]` Preview Percentage 1.0, `[11000]` Show Bounding Box 0. `[12000]` Materials From: 0 Proxy File (default, used),
-  1 Object, 2 Scene (match by name/prefix).
+  1 Object, 2 Scene (match by name/prefix); `[12001]` Prefix; `[12002]` lists the materials baked into the .rs as
+  `<source .c4d name>:<material name>`. With mode 0 the look can only change by re-exporting the proxy; mode 2 would take
+  editable scene materials of those names (name matching not render-tested).
 - **Instances** (`Oinstance`, render-instance mode) of a proxy render correctly, also when the proxy sits in a hidden
   "assets" group — the same pattern as hidden masters. But not when the proxy object's OWN render visibility is off: 800 instances
   rendered nothing (2027.0); keep the master on and hide its parent group. Swapping embedded masters for proxies: put the proxy where the
