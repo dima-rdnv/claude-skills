@@ -170,6 +170,9 @@ sleep 2      # a background spawn from a remote shell may not start without it
   answers the prompt on macOS. Pass the script by **absolute path** — a relative one is looked up
   inside the C4D bundle ("can't open file").
 - "License needs activation" = the Maxon licence is in use on another machine: one machine at a time.
+  It also came up (Windows, Nov 2026) when the C4D GUI was closed and the Maxon App wasn't running:
+  starting `C:\Program Files\Maxon\App Manager\Maxon.exe` fixed it within seconds (the licence service log
+  `C:\ProgramData\Maxon\Logs\maxon-service.log` then says `License found ... activated: yes`).
 - Runs without the GUI, next to an open C4D. `LoadDocument` the user's file read-only, work on a
   take document (`td.TakeToDocument(take)`), write results to new files — the open scene is never
   touched. Redshift loads there too — check `c4d.plugins.FindPlugin(1036219)` before saving a file

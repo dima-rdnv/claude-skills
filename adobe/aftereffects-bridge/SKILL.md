@@ -173,6 +173,20 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   not block (290 of 366 frames present).
 - A script that throws midway keeps its earlier edits (e.g. a half-configured queue item) — check
   the queue before retrying, and guard against adding a second copy.
+- **Rendering outside the GUI with aerender** (verified AE 2027, Nov 2026) avoids the dialog trap above: queue the item,
+  `p.save()`, then `aerender.exe -project <aep> -rqindex N` (in `Support Files`) in the background, and switch the item's
+  `render` off afterwards so a GUI Render can't overwrite the file. aerender re-reads the saved project on each launch:
+  don't save while a loop of launches is between items, and indices shift when items are removed.
+  **aerender skips an item whose output file another queue item also writes**: it logs `WARNING: ... The name of an
+  output module for this render item is already in use`, exits 0 after ~20 s and writes nothing. Typical after a Save-As
+  that carried old queue items with the same file names. Check each log for `Finished composition`, and remove or
+  retarget the old items first.
+- **A licence dialog of a third-party plug-in can block saving** (verified AE 2027, Nov 2026): `p.save(newFile)` sat
+  for 50 min at a 0-byte temp file (`<name><guid>.aep`), heartbeat `aeWaiting` rising, AE "Responding" at ~0 % CPU.
+  AE's visible top-level windows (Win32 `EnumWindows` filtered by its process id) showed a `#32770` "Save Project" window
+  plus one of class `RGMainDialog` (a Red Giant / Maxon licence prompt, after the licence moved to another machine); its
+  text isn't readable from outside. The user re-assigned the licence and restarted AE; the save had completed, the rest
+  of the script was lost.
 
 ## Swapping and adding renders (verified, AE 2026, 32 bpc OCIO project)
 - A new version of a render already in comps: `footageItem.replaceWithSequence(new File(".../x.0000.exr"),
