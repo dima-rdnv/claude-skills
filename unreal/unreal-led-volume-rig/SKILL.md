@@ -67,6 +67,25 @@ A 750 MB scene loaded in ~40 s.
   Rotation from the C4D camera axes through the import's axis mapping: `make_rot_from_xz(M(v3), M(v2))`.
 - With an FBX/Interchange-imported scene the mapping is UE = C4D (x, -z, y) (not the (z, x, y) of a hand-built room): the
   front camera faces -Y (yaw -90), left -X, right +X - build the cameras with the same mapping as the geometry.
+- **Spatial effects per wall in After Effects (glow, blur) break the seams** (verified Nov 2026, AE 2026, Optical Glow):
+  an effect inside each wall comp only sees its own wall, so a halo stops dead at the edge. Fix: per wall a pad comp =
+  the wall + its neighbours **laid flat** around it (the walls share one pixel pitch, so each neighbour is a 0/90/270-degree
+  rotation + translation, anchored at the shared corner; compute it from the rig: one eye, Front plane at distance 1,
+  every other plane through the Front frustum edge it shares), the effect on a pad-sized adjustment layer (copy every
+  parameter value), and the pad comp centred in the wall comp in place of source + effect (originals switched off).
+  Both pads at a seam then hold the same picture around it and the glow meets. Seam steps measured on one frame went
+  from 2-4x the no-glow step back to it.
+  - Pad size: the halo's tail sets it; Optical Glow Size 176 still added ~30 % of its seam value 1000 px in, so pad 1024.
+    Pad-sized glow costs ~1 s/frame per wall at ~5000 px squares.
+  - Perspective strips (neighbour warped into the wall's extended image plane with a homography / Corner Pin) are
+    worse: the two cameras' pixel densities differ 1.8-3.9x at a seam, so the two pads see the seam differently.
+  - Walls overlap by ~2 px at the seams. With semi-transparent layers (a light-trail pass) a neighbour under the wall
+    doubles the alpha into a bright 2 px line: put the neighbours in their own comp with a pixel-exact Subtract mask over
+    the wall's rectangle.
+  - **Check the effect settings on every wall first.** One seam kept a step until it turned out that wall's glow had
+    different values (Amount / Highlights Only) - per-wall settings can't meet at a seam whatever the padding.
+  - Measure seams on exported frames: compare the last pixel row/column of one wall with the first of its neighbour
+    against the step between two neighbouring rows inside a wall, with and without the effect.
 - **Unfolded check**: render one frame per wall at full size and paste them into the unfolded box - the walls tile at one
   pixel density (e.g. 2884 px over a front of 2 x 0.5473 eye-units = 2635 px/unit; side walls 2560 px over depth
   0.0284..1.0, ceiling 2882 px over -0.0939..1.0, floor 2342 px over 0.1118..1.0): front at (side_w, top_h), left at
