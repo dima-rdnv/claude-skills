@@ -89,6 +89,7 @@ a script into an inbox folder and the panel writes the result back as JSON.
 |---|---|
 | [aftereffects-bridge](adobe/aftereffects-bridge/SKILL.md) | **After Effects, Windows and macOS.** A [panel](adobe/aftereffects-bridge/panel) that runs only signed scripts, installers for both systems, inspecting comps, preview frames, render-queue exports, swapping renders in an OCIO project, Cinema 4D camera and nulls matched to 0.04 px, retiming keys to a voice-over, HUD and UI layers. |
 | [aftereffects-scripting](adobe/aftereffects-scripting/SKILL.md) | **After Effects from a macOS shell, no panel.** AppleScript plus ExtendScript for reading comps and markers, shot tables, review comps, one layer per shot, compositing passes from other apps, time-remap holds, split screens, render-queue frame checks. |
+| [aftereffects-expression-rigs](adobe/aftereffects-expression-rigs/SKILL.md) | **After Effects expression rigs, through the bridge.** One CONTROLLER null with sliders, layers indexed by name, seamless loops, shuffles, a looping 3D spiral flythrough with a real camera and focal length, depth fog with Fill + CC Composite, a guide layer for the paths, and offline checks. |
 | [premiere-bridge](adobe/premiere-bridge/SKILL.md) | **Premiere Pro, Windows.** A self-signed [panel](adobe/premiere-bridge/panel) (CEP 12 ignores debug mode), inspecting sequences and bins, frame export, relinking to transcoded media with before-and-after proof, transcode settings that keep the picture identical. |
 
 ### General

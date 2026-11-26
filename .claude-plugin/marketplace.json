@@ -62,6 +62,7 @@
       "skills": [
         "./adobe/aftereffects-bridge",
         "./adobe/aftereffects-scripting",
+        "./adobe/aftereffects-expression-rigs",
         "./adobe/premiere-bridge"
       ]
     },
