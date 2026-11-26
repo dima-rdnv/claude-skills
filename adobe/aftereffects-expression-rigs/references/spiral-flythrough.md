@@ -85,6 +85,24 @@ var t = Math.min(1, Math.max(0, effect("U")("Slider") / f));
 3. `duplicate()` configured layers up to the capacity (51 more), rename `PIC 078 ...`.
 4. Error scan, loop check, `toComp` check, preview frames at 0 / 3 / 7.5 / 11 s, save.
 
+## Variant: pictures sorted per arm, in layer-index order (verified)
+Duplicate the comp (`comp.duplicate()`; expressions use `thisComp`, so the copy works on its own), delete the
+capacity duplicates, and deal the N pictures onto the arms in blocks: `q = floor(N / P)`, `r = N % P`,
+`big = r * (q + 1)`; picture `k` (0-based) is on arm `k < big ? floor(k / (q + 1)) : r + floor((k - big) / q)`
+at position `k < big ? k % (q + 1) : (k - big) % q`, and its arm holds `Ma = k < big ? q + 1 : q` pictures
+(sizes differ by at most one, every picture used once, 77 on 6 arms = 13,13,13,13,13,12).
+- `k` comes from the real stack order: `thisLayer.index - thisComp.layer("GUIDE | spiral paths").index - 1`,
+  so dragging a layer in the timeline moves its picture to another arm. Name-based ranks cannot do that.
+- Progress `ph = (jj + stagger * arm / P) / Ma` with `jj = Ma - 1 - j` (Order 0: first picture of an arm is
+  the nearest at t = 0 and the first to exit and re-enter, so the entering order follows the index) or `jj = j`.
+  With `ph` increasing in the position the *entering* order is descending: decide which one the user wants.
+- Put Arm / Index / Count in slider effects (Index and Count are new effects added after the existing ones).
+- Remove sliders that nothing reads any more (here Pics Per Path, Shuffle) **after** rewriting the expressions
+  that used them, so no expression is broken between two steps (a broken expression can raise a dialog).
+- A duplicated comp inherits the user's *current* slider values (they had tuned Paths, focal length, radius):
+  read both controllers before overriding anything, and do not reset values the user set.
+Result: each arm becomes one thematic stream (all pictures of a type fan out along one arm).
+
 ## Improvements worth offering
 Depth of field with the focus distance following the mid depth, motion blur, per-picture size variety,
 a Direction toggle (negative Laps), a custom arm shape (draw a path and read `pointOnPath`) for non-spiral
