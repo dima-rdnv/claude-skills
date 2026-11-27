@@ -1,6 +1,6 @@
 ---
 name: aftereffects-bridge
-description: Driving Adobe After Effects from Claude without an MCP server, through a file-based ExtendScript bridge (a signed CEP panel that runs signed .jsx files dropped into an inbox folder and writes JSON results). Covers finding and starting the bridge, sending scripts safely, inspecting comps/layers/keys/expressions, rendering preview frames, retiming keyframes to a voice-over, building UI elements (shape/text layers with expression-driven interactions), and verified traps. Use whenever a task touches After Effects / AE / .aep comps.
+description: Driving Adobe After Effects from Claude without an MCP server, through a file-based ExtendScript bridge (a signed CEP panel that runs signed .jsx files dropped into an inbox folder and writes JSON results). Covers finding and starting the bridge, sending scripts safely, inspecting comps/layers/keys/expressions, rendering preview frames, retiming keyframes to a voice-over, building UI elements (shape/text layers with expression-driven interactions), measuring colours with sampleImage, and verified traps. Use whenever a task touches After Effects / AE / .aep comps.
 ---
 
 # After Effects via the file bridge (verified AE 2026 / 26.5, Windows and macOS)
@@ -112,7 +112,11 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   then `endSuppressDialogs(false)` opened a 190-item project with 31 missing footage items in 11 s
   without a dialog; `p.save(newFile)` straight after = Save-As before touching anything.
 - ExtendScript is ES3: unquoted `in` / `out` / `native` (any ES3 reserved word) as object keys fail
-  with "SyntaxError: Illegal use of reserved word" — write `{"in": L.inPoint, "native": …}`.
+  with "SyntaxError: Illegal use of reserved word" — write `{"in": L.inPoint, "native": …}`. Variable
+  names too (`var short = …` fails the same way).
+- After `fxParade.addProperty(...)` and `effect.moveTo(i)` the references you already hold to the other
+  effects of that layer die ("ReferenceError: Object is invalid"): fetch every effect again by name.
+  If the script threw after the add, the effect stays; the rerun must look it up by name, not add another.
 
 ## Cinema 4D → AE 3D data (verified 4 Nov 2026, to 0.04 px)
 - Positions: AE = `[W/2 + x·s, H/2 − y·s, z·s]` (C4D cm, s = compWidth / C4D render width; C4D origin
@@ -145,6 +149,13 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   puts a night sky on codes 0–2, so the gamma lift shows hard ovals and arcs that are pure 8-bit
   rounding, not in the footage. Check the code values (`np.unique`) before reporting banding, and
   judge gradients in the graded comp, not a raw layout comp.
+- **For numbers use `layer.sampleImage(point, radius, true, time)` on a precomp layer, not PNGs**
+  (verified Nov 2026, 32 bpc ACEScg + OCIO Display Transform on top): `saveFrameToPng` gave near-black
+  frames (code ~ display float x 25.5, ~25 levels), while `sampleImage` returns the exact display floats
+  and matched a render-queue PNG (code = float x 255) to 0.0008 mean abs diff. It reads whatever is
+  enabled in that comp, including a reference clip left on top. Grid of 384 points ~0.2 s via a text
+  layer expression read with `valueAtTime(0, false).text`. Colour matching workflow:
+  `aftereffects-look-matching`.
 - Contact sheets: Pillow (`uv run --with pillow python -I sheet.py …`) worked. Windows ffmpeg 7.1
   segfaulted / heap-crashed on `color`+`overlay`+`vstack` graphs fed with these rgba64 PNGs, and
   `drawtext` fails without a fontconfig file — don't bother.
@@ -171,6 +182,9 @@ macOS have it). Number scripts (`057_render.jsx`) so `done/` reads as a history.
   and ask them to close the dialog; keep saving the project as a separate later step, not after `rq.render()`.
   Importing a sequence with missing frames inside `app.beginSuppressDialogs()` / `endSuppressDialogs(false)` did
   not block (290 of 366 frames present).
+- `rq.render()` inside a bridge script also left AE's modal warning **"Undo group mismatch, will attempt to
+  fix"** (verified Nov 2026, 1-frame PNG items): harmless, but the user has to click OK. Not worth it for
+  single frames (~2 s of overhead each); measure with `sampleImage`, or use aerender below.
 - A script that throws midway keeps its earlier edits (e.g. a half-configured queue item) — check
   the queue before retrying, and guard against adding a second copy.
 - **Rendering outside the GUI with aerender** (verified AE 2027, Nov 2026) avoids the dialog trap above: queue the item,
